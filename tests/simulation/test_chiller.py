@@ -56,3 +56,7 @@ class TestCentrifugalChiller:
         max_cap = chiller.max_capacity_rt
         assert min_cap == 100.0
         assert max_cap == 500.0
+
+    def test_zero_load_power(self, chiller):
+        power = chiller.compute_power_kw(load_rt=0, t_chw=7.0, t_cw=30.0)
+        assert power == 0.0

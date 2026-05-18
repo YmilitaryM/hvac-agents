@@ -1,5 +1,7 @@
 import numpy as np
 
+_F_LOAD_AT_FULL = 1.0 - 1.2 * (1.0 - 0.75) ** 2  # 0.925
+
 
 class CentrifugalChiller:
     """Centrifugal chiller physics model — reverse Carnot + empirical corrections"""
@@ -31,7 +33,7 @@ class CentrifugalChiller:
 
     @property
     def max_capacity_rt(self) -> float:
-        return self.capacity_rt * 1.0
+        return self.capacity_rt
 
     def compute_cop(self, plr: float, t_chw: float, t_cw: float) -> float:
         """Compute COP at given operating conditions
@@ -46,9 +48,7 @@ class CentrifugalChiller:
         if plr < self.surge_boundary(t_cw):
             return 0.0
 
-        f_load_raw = 1.0 - 1.2 * (plr - 0.75) ** 2
-        f_load_at_design = 1.0 - 1.2 * (1.0 - 0.75) ** 2  # 0.925
-        f_load = f_load_raw / f_load_at_design
+        f_load = (1.0 - 1.2 * (plr - 0.75) ** 2) / _F_LOAD_AT_FULL
 
         f_evap = 1.0 + 0.03 * (t_chw - self.design_chw_supply_temp)
 
@@ -59,6 +59,8 @@ class CentrifugalChiller:
 
     def compute_power_kw(self, load_rt: float, t_chw: float, t_cw: float) -> float:
         """Compute power kW = cooling(kW) / COP"""
+        if load_rt <= 0:
+            return 0.0
         plr = load_rt / self.capacity_rt if self.capacity_rt > 0 else 0
         cop = self.compute_cop(plr=plr, t_chw=t_chw, t_cw=t_cw)
         if cop <= 0:
