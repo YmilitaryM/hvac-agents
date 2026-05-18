@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/Users/ymilitarym/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/brainstorming/scripts/start-server.sh *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(uv sync *)",
+      "Bash(uv run *)",
+      "Bash(git commit *)",
+      "Bash(git *)"
+    ]
+  }
+}

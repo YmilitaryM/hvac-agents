@@ -1,0 +1,75 @@
+<h2>多智能体框架选型 — 方案对比</h2>
+<p class="subtitle">HVAC制冷站多智能体系统的技术栈推荐</p>
+
+<div class="options">
+  <div class="option" data-choice="langgraph" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>LangGraph + 自定义仿真 (推荐)</h3>
+      <p>LangGraph 做多智能体状态编排，自定义Python模型做HVAC设备仿真，FastAPI + MQTT做数据层</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优势</h4>
+          <ul>
+            <li>状态图模型天然适合制冷站控制流程（启停、加减载、模式切换）</li>
+            <li>灵活的Agent间通信和工具调用</li>
+            <li>生态成熟，与LLM集成方便</li>
+            <li>可控的复杂度，不会过度抽象</li>
+          </ul>
+        </div>
+        <div class="cons"><h4>劣势</h4>
+          <ul>
+            <li>需要自己设计Agent拓扑和通信协议</li>
+            <li>LangGraph学习曲线中等</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="crewai" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>CrewAI + 自定义仿真</h3>
+      <p>CrewAI 做角色化多智能体协作，自定义Python模型做HVAC设备仿真</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优势</h4>
+          <ul>
+            <li>开箱即用的角色分工（Crew/Agent/Task）</li>
+            <li>上手快，概念直观</li>
+          </ul>
+        </div>
+        <div class="cons"><h4>劣势</h4>
+          <ul>
+            <li>实时控制和状态管理能力较弱</li>
+            <li>框架对执行流程的控制不如状态图精细</li>
+            <li>与工业控制场景的契合度不如LangGraph</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="pure-python" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>纯 Python + asyncio + 自建框架</h3>
+      <p>不用任何Agent框架，完全自建多智能体通信和状态管理</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优势</h4>
+          <ul>
+            <li>最大灵活性，零框架约束</li>
+            <li>轻量，无额外依赖</li>
+            <li>完全掌控执行逻辑</li>
+          </ul>
+        </div>
+        <div class="cons"><h4>劣势</h4>
+          <ul>
+            <li>需要自行实现大量基础能力（状态管理、Agent通信、错误恢复）</li>
+            <li>开发周期长</li>
+            <li>后期维护成本高</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

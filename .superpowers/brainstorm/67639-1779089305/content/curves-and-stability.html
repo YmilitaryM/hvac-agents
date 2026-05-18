@@ -1,0 +1,179 @@
+<h2>性能曲线获取 & 系统稳定性设计</h2>
+<p class="subtitle">不用厂家曲线 — 用仿真+数据回归 | 策略必须包含过渡过程</p>
+
+<div class="section">
+  <h3>Q1: 不用厂家曲线，用什么？— 三层曲线获取策略</h3>
+
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">阶段</th><th style="padding:10px;">方法</th><th style="padding:10px;">具体做法</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px; color:#e9c46a;">Layer 1<br><span style="font-size:10px;">仿真初始化</span></td>
+      <td style="padding:10px;"><strong>物理机理模型</strong></td>
+      <td style="padding:10px; font-size:12px;">
+        • 冷机：逆卡诺循环 + 效率修正系数 → COP = f(PLR, T<sub>evap</sub>, T<sub>cond</sub>)<br>
+        • 冷却塔：Merkel理论 + 传热单元数法 → 逼近度 = f(风量, 水量, 湿球温度)<br>
+        • 水泵：相似定律 → 功率 = f(频率, 流量, 扬程)<br>
+        • <strong style="color:#4caf50;">关键</strong>：这些模型需要的参数（换热面积、压缩机效率等）从<strong>典型设备参数</strong>推算，不需要具体厂家的专有数据
+      </td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px; color:#4caf50;">Layer 2<br><span style="font-size:10px;">仿真→优化</span></td>
+      <td style="padding:10px;"><strong>代理模型 (Surrogate Model)</strong></td>
+      <td style="padding:10px; font-size:12px;">
+        • 用物理模型跑大量仿真工况（覆盖负荷率10%~100%、各种温度组合）<br>
+        • 生成合成数据集 → 多项式回归 → 得到轻量的COP曲面方程<br>
+        • 优化引擎用的就是这些<strong>多项式代理模型</strong>，不是物理模型（物理模型太慢）
+      </td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px; color:#2196f3;">Layer 3<br><span style="font-size:10px;">实测校准</span></td>
+      <td style="padding:10px;"><strong>在线参数辨识</strong></td>
+      <td style="padding:10px; font-size:12px;">
+        • 接入真实设备后，用运行数据<strong>在线修正</strong>代理模型的系数<br>
+        • 方法：递推最小二乘(RLS) 或 卡尔曼滤波 → 系数随设备老化缓慢漂移<br>
+        • 监测Agent提供退化信号，当实际COP偏离模型预测超过阈值 → 触发重拟合<br>
+        • <strong style="color:#e94560;">不依赖任何厂家数据，完全自适应</strong>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>三层曲线获取 — 数据流</h3>
+  <div style="background:#1a1a2e; padding:12px; border-radius:8px; font-family:monospace; font-size:11px; line-height:1.8; color:#e0e0e0;">
+    <strong>物理机理模型</strong> (仿真层，运行一次)<br>
+    &nbsp;&nbsp;→ 产生大量工况-性能数据点 (离线)<br>
+    &nbsp;&nbsp;→ <strong>多项式回归拟合</strong> → 轻量代理模型 (优化引擎使用)<br><br>
+    <strong>代理模型</strong> (优化引擎运行时)<br>
+    &nbsp;&nbsp;→ 每次优化时读取当前的代理模型系数<br>
+    &nbsp;&nbsp;→ 计算速度: 微秒级 (就是多项式求值)<br><br>
+    <strong>在线参数辨识</strong> (实测运行后持续)<br>
+    &nbsp;&nbsp;→ 实时数据流 → RLS/KF更新系数<br>
+    &nbsp;&nbsp;→ 当 ||实际COP - 预测COP|| > 阈值 → 通知监测Agent<br>
+    &nbsp;&nbsp;→ 监测Agent标记"设备性能异常"或"模型需重标定"
+  </div>
+</div>
+
+<div class="section" style="margin-top:28px;">
+  <h3>Q2: 超调与稳定性 — 策略不能只有终态，必须有过渡过程</h3>
+
+  <div style="background:#2a1a1a; padding:14px; border-radius:8px; margin-bottom:16px; border-left:4px solid #e94560;">
+    <p style="color:#e94560; font-size:14px;"><strong>问题本质</strong>：制冷站有巨大的热惯性。冷冻水系统有数百吨水，建筑物有热容。一个"15:00停2号冷机"的指令如果直接下发，会导致出水温度剧烈波动、系统压力冲击、甚至触发其他设备的保护停机。</p>
+  </div>
+
+  <h3>策略的过渡过程设计</h3>
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px; font-family:monospace; font-size:11px; line-height:1.5; color:#e0e0e0; margin-bottom:16px;">
+{
+  <span style="color:#e9c46a;">"strategy_id"</span>: "sched_20260518_1500_001",
+
+  <span style="color:#e9c46a;">"transition_plan"</span>: {                          <span style="color:#4caf50;">// 新增：过渡计划</span>
+    <span style="color:#e9c46a;">"total_duration_sec"</span>: 600,                  <span style="color:#666;">// 过渡总时长: 10分钟</span>
+
+    <span style="color:#e9c46a;">"phases"</span>: [
+      {
+        "seq": 1, "duration_sec": 120,           <span style="color:#666;">// Phase 1: 120秒</span>
+        "description": "chiller_2 负荷率从 60% → 30%，降低速率 0.25%/s, 同步降 p ump_3 频率 40→35Hz",
+        "actions": [
+          {"device": "chiller_2", "action": "ramp_load", "from": 0.60, "to": 0.30, "rate": 0.0025},
+          {"device": "pump_3",    "action": "ramp_freq",  "from": 40,   "to": 35,   "rate": 0.042}
+        ]
+      },
+      {
+        "seq": 2, "duration_sec": 180,           <span style="color:#666;">// Phase 2: 180秒 观察稳定</span>
+        "description": "chiller_2 负荷率 30%稳定，观察出水温度是否稳定在7±0.3°C",
+        "actions": [],
+        "stability_check": {"metric": "chw_supply_temp", "max_deviation": 0.3, "window_sec": 60}
+      },
+      {
+        "seq": 3, "duration_sec": 120,           <span style="color:#666;">// Phase 3: 120秒</span>
+        "description": "chiller_2 负荷率 30% → 0%，关闭阀门V3",
+        "actions": [
+          {"device": "chiller_2", "action": "ramp_load", "from": 0.30, "to": 0.0, "rate": 0.0025},
+          {"device": "valve_v3",  "action": "close"}
+        ]
+      },
+      {
+        "seq": 4, "duration_sec": 180,           <span style="color:#666;">// Phase 4: 180秒 最终稳定</span>
+        "description": "chiller_2 完全停机，chiller_1 承接全部负荷，确认系统稳定",
+        "actions": [
+          {"device": "chiller_1", "action": "set_setpoint", "param": "chw_temp", "value": 6.8}
+        ],
+        "stability_check": {"metric": "chw_supply_temp", "max_deviation": 0.5, "window_sec": 120}
+      }
+    ],
+
+    <span style="color:#e9c46a;">"abort_conditions"</span>: [                    <span style="color:#4caf50;">// 新增：中止条件</span>
+      "任意阶段出水温度偏差 > 1.5°C 持续30秒",
+      "任意冷机触发保护告警",
+      "系统压差超过安全限值"
+    ],
+
+    <span style="color:#e9c46a;">"rollback_plan"</span>: {                       <span style="color:#4caf50;">// 新增：回滚计划</span>
+      "trigger": "任一abort_condition触发",
+      "actions": [
+        {"device": "chiller_2", "action": "start", "target_load": 0.60},
+        {"device": "valve_v3",  "action": "open"},
+        {"device": "pump_3",    "action": "set_frequency", "value": 40}
+      ]
+    }
+  }
+}
+  </div>
+
+  <h3>稳定性控制的三道防线</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:8px;">防线</th><th style="padding:8px;">位置</th><th style="padding:8px;">机制</th><th style="padding:8px;">响应时间</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#4caf50;">1. 策略级</td>
+      <td style="padding:8px;">策略Agent<br>+ 联合优化引擎</td>
+      <td style="padding:8px; font-size:12px;">
+        • 过渡计划内置斜坡速率限制 (ramp rate)<br>
+        • 分阶段执行，每阶段有稳定性检查点<br>
+        • 优化引擎考虑过渡过程的能耗成本<br>
+        • 回滚计划预置，不用临时想
+      </td>
+      <td style="padding:8px;">策略生成时<br>(分钟级)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#e9c46a;">2. 执行级</td>
+      <td style="padding:8px;">参数Agent<br>(实时微调控制器)</td>
+      <td style="padding:8px; font-size:12px;">
+        • 死区 (Deadband)：出水温度±0.3°C内不动作，防止频繁调节<br>
+        • 速率限制 (Rate Limiter)：设定值变化 < 0.1°C/min<br>
+        • 抗积分饱和 (Anti-windup)：PID输出不累积到无效区间<br>
+        • 振荡检测：连续N次反向调节 → 暂停并告警
+      </td>
+      <td style="padding:8px;">秒级</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#e94560;">3. 保护级</td>
+      <td style="padding:8px;">安全Agent<br>(规则引擎)</td>
+      <td style="padding:8px; font-size:12px;">
+        • 硬限值保护：温度/压力/电流不可超越<br>
+        • 过渡过程中止条件触发 → 立即回滚<br>
+        • 设备最小运行/停机时间保护 (防频繁启停)
+      </td>
+      <td style="padding:8px;">毫秒级</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>更新后的策略Agent输出 — 完整版</h3>
+  <div style="background:#0f3460; padding:12px; border-radius:8px; font-size:12px; line-height:1.8;">
+    <p style="color:#4caf50;"><strong>策略Agent调用联合优化引擎 → 获取帕累托解 → LLM选择 → 输出完整策略包：</strong></p>
+    <p style="color:#e0e0e0;">
+      1. 终态目标：设备组合 + 目标参数<br>
+      2. 过渡计划：分阶段斜坡 + 稳定性检查点<br>
+      3. 前置条件：执行前必须满足的条件<br>
+      4. 中止条件：什么情况下终止执行<br>
+      5. 回滚计划：终止后如何恢复<br>
+      6. 预期效果：COP、节能、碳减排<br>
+      7. LLM推理：为什么从帕累托解中选了这个
+    </p>
+  </div>
+</div>

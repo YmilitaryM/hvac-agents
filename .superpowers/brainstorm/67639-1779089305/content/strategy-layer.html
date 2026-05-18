@@ -1,0 +1,104 @@
+<h2>更新后的架构：四层 + 策略生命周期管理</h2>
+<p class="subtitle">LLM 不只是分析和交互，还能生成可审核、可调度、可追溯的控制策略</p>
+
+<div class="mockup">
+  <div class="mockup-header">四层架构 + 策略流水线</div>
+  <div class="mockup-body" style="font-family: monospace; font-size: 13px; line-height: 1.8; padding: 20px;">
+
+    <div style="background:#1a1a2e; color:#e94560; padding:12px; border-radius:8px; margin-bottom:8px; text-align:center; font-size:15px;">
+      🧠 智能层 (LLM)<br>
+      <span style="color:#a0a0b0; font-size:12px;">自然语言交互 · 异常诊断 · 报告生成 · <strong style="color:#e9c46a;">策略生成</strong></span>
+    </div>
+
+    <div style="text-align:center; color:#e9c46a; margin:6px 0; font-size:13px;">▼ 策略草案（JSON/结构化）</div>
+
+    <div style="background:#2a1a3e; color:#e9c46a; padding:12px; border-radius:8px; margin-bottom:8px; text-align:center; font-size:15px; border: 2px dashed #e9c46a;">
+      👤 策略审核层 (Human-in-the-Loop) ← 新增<br>
+      <span style="color:#a0a0b0; font-size:12px;">审核通过 → 定时任务注册 | 驳回 → 回写原因</span>
+    </div>
+
+    <div style="text-align:center; color:#4caf50; margin:6px 0; font-size:13px;">▼ 已批准策略 → 定时调度</div>
+
+    <div style="background:#16213e; padding:12px; border-radius:8px; margin-bottom:8px; text-align:center; font-size:15px;">
+      <span style="color:#4caf50;">⚙️ 策略执行层 (调度引擎) ← 新增</span><br>
+      <span style="color:#a0a0b0; font-size:12px;">定时触发 · 前置条件检查 · 指令下发 · 结果追踪 · 回滚</span>
+    </div>
+
+    <div style="text-align:center; color:#666; margin:6px 0;">▼ 指令 / 数据 ▲</div>
+
+    <div style="background:#0f3460; color:#e94560; padding:12px; border-radius:8px; margin-bottom:8px; text-align:center; font-size:15px;">
+      ⚡ 实时控制层<br>
+      <span style="color:#a0a0b0; font-size:12px;">设备启停 · 阀门调节 · PID控制 · 安全保护</span>
+    </div>
+
+    <div style="text-align:center; color:#666; margin:6px 0;">▲ 设备数据</div>
+
+    <div style="background:#1a1a1a; color:#a0a0b0; padding:12px; border-radius:8px; text-align:center; font-size:15px;">
+      🏭 仿真 / 物理设备层
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>策略生命周期</h3>
+  <table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px; text-align:left;">阶段</th>
+      <th style="padding:10px; text-align:left;">做什么</th>
+      <th style="padding:10px; text-align:left;">谁负责</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">1. 策略生成</td>
+      <td style="padding:10px;">LLM基于负荷预测、电价、设备状态生成策略（如"14:00减机：关2号主机、关阀门V3、降3号泵频率至30Hz"）</td>
+      <td style="padding:10px;">LLM Agent</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">2. 可行性校验</td>
+      <td style="padding:10px;">系统自动检查策略是否满足安全约束（不能全关、不能超负荷运行等）</td>
+      <td style="padding:10px;">规则引擎</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">3. 人工审核</td>
+      <td style="padding:10px;">操作员看到策略内容、预期效果、风险评估，决定通过或驳回</td>
+      <td style="padding:10px;">操作员</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">4. 定时调度</td>
+      <td style="padding:10px;">通过后注册为定时任务，到点触发前置条件检查（当前负荷是否允许、设备是否可用）</td>
+      <td style="padding:10px;">调度引擎</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">5. 执行 &amp; 追踪</td>
+      <td style="padding:10px;">满足条件则下发指令，记录执行结果，异常时触发告警或回滚</td>
+      <td style="padding:10px;">执行引擎 + 实时控制层</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>一个完整的例子：三点减机策略</h3>
+  <div style="background:#1a1a2e; padding:16px; border-radius:8px; font-family:monospace; font-size:13px; color:#e0e0e0;">
+<span style="color:#4caf50;">// Step 1: LLM 基于预测生成策略草案</span>
+{
+  <span style="color:#e9c46a;">"strategy_id"</span>: "sched_20260518_001",
+  <span style="color:#e9c46a;">"created_by"</span>: "strategy-agent",
+  <span style="color:#e9c46a;">"trigger_time"</span>: "2026-05-18T15:00:00",
+  <span style="color:#e9c46a;">"reason"</span>: "预测15:00后冷负荷下降至额定制冷量的40%，单机可满足",
+  <span style="color:#e9c46a;">"actions"</span>: [
+    {"cmd": "stop_chiller", "device": "chiller_2"},
+    {"cmd": "close_valve", "device": "valve_v3"},
+    {"cmd": "set_pump_freq", "device": "pump_3", "value": 30}
+  ],
+  <span style="color:#e9c46a;">"preconditions"</span>: [
+    "total_load < 45%",
+    "chiller_1 is running",
+    "supply_water_temp < 7.5 degC"
+  ],
+  <span style="color:#e9c46a;">"expected_effect"</span>: "节电约120kWh/小时"
+
+<span style="color:#4caf50;">// Step 2: 规则引擎自动校验 → 通过</span>
+<span style="color:#4caf50;">// Step 3: 操作员审核 → 批准</span>
+<span style="color:#4caf50;">// Step 4: 调度引擎注册定时任务</span>
+<span style="color:#4caf50;">// Step 5: 15:00触发，前置条件检查通过 → 下发指令</span>
+}</div>
+</div>

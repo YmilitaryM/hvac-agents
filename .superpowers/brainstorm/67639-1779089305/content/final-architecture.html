@@ -1,0 +1,91 @@
+<h2>HVAC制冷站多智能体系统 — 完整架构</h2>
+<p class="subtitle">11 Agent · 7阶段工作流 · 5层架构 · RL进化 · 人在回路</p>
+
+<div class="section">
+  <h3>一、系统全景 — 5层架构</h3>
+  <div class="mockup">
+    <div class="mockup-header">数据自下而上流动，决策自上而下传递</div>
+    <div class="mockup-body" style="padding:16px; font-family:monospace; font-size:12px; line-height:2.2;">
+
+      <div style="background:#1a1a2e; border:2px solid #e94560; padding:12px; border-radius:8px; text-align:center; margin-bottom:6px;">
+        <strong style="color:#e94560; font-size:14px;">L5 智能层 — Agent决策引擎</strong><br>
+        <span style="color:#a0a0b0;">11 Agent 协作 · LangGraph编排 · LLM推理 · 辩论仲裁</span>
+      </div>
+
+      <div style="text-align:center; color:#888; margin:4px 0;">▲ 策略/参数 | 查询/建议 ▼</div>
+
+      <div style="background:#16213e; border:2px solid #e9c46a; padding:12px; border-radius:8px; text-align:center; margin-bottom:6px;">
+        <strong style="color:#e9c46a; font-size:14px;">L4 服务平台层</strong><br>
+        <span style="color:#a0a0b0;">报告服务 · RAG标准库 · RL审核引擎 · 定时调度器 · 消息总线 (Redis/MQTT)</span>
+      </div>
+
+      <div style="text-align:center; color:#888; margin:4px 0;">▲ 控制指令 | 设备数据 ▼</div>
+
+      <div style="background:#0f3460; border:2px solid #4caf50; padding:12px; border-radius:8px; text-align:center; margin-bottom:6px;">
+        <strong style="color:#4caf50; font-size:14px;">L3 实时控制层</strong><br>
+        <span style="color:#a0a0b0;">PID调节 · 设备启停 · 安全联锁 · 故障切换 · 数据采集网关</span>
+      </div>
+
+      <div style="text-align:center; color:#888; margin:4px 0;">▲ 传感器数据流 ▼</div>
+
+      <div style="background:#1a1a1a; border:2px solid #666; padding:12px; border-radius:8px; text-align:center; margin-bottom:6px;">
+        <strong style="color:#a0a0b0; font-size:14px;">L2 仿真层</strong><br>
+        <span style="color:#888;">冷水机组模型 · 冷却塔模型 · 水泵模型 · 管路水力模型 · 建筑热工模型 · 气象模拟器</span>
+      </div>
+
+      <div style="text-align:center; color:#888; margin:4px 0;">▲ 配置/参数 ▼</div>
+
+      <div style="background:#111; border:2px solid #555; padding:12px; border-radius:8px; text-align:center;">
+        <strong style="color:#888; font-size:14px;">L1 基础设施层</strong><br>
+        <span style="color:#666;">时序数据库(InfluxDB/TimescaleDB) · 向量数据库(标准RAG) · 消息队列 · 对象存储 · 监控(Prometheus)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>二、11 Agent 全景</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:8px;">类别</th><th style="padding:8px;">Agent</th><th style="padding:8px;">LLM等级</th><th style="padding:8px;">核心职责</th><th style="padding:8px;">工具</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#0f3460;">
+      <td rowspan="3" style="padding:8px; vertical-align:middle;"><strong>执行层</strong></td>
+      <td>🔍 监测</td><td>Quick</td><td>设备状态、异常检测、健康评估</td><td>传感器数据接口、时序查询</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#0f3460;">
+      <td>📈 预测</td><td>Quick</td><td>多尺度冷负荷预测</td><td>天气API、ML推理、历史数据</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#0f3460;">
+      <td>🎯 策略</td><td>Deep</td><td>运行策略生成（加减机/模式切换）</td><td>预测结果、设备模型、电价数据</td>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333; background:#1a2e1a;">
+      <td rowspan="4" style="padding:8px; vertical-align:middle;"><strong>专家层</strong></td>
+      <td>🌡️ 暖通</td><td>Deep</td><td>热力学审查、制冷循环、水力平衡</td><td rowspan="4" style="font-size:11px;">共享RAG标准库<br>(ASHRAE/GB/ISO)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#1a2e1a;">
+      <td>⚡ 机电</td><td>Deep</td><td>设备机械约束、电气安全、维护审查</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#1a2e1a;">
+      <td>💰 能源</td><td>Quick</td><td>能效优化、电力成本、需量管理</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#1a2e1a;">
+      <td>🌿 碳排放</td><td>Quick</td><td>碳排放核算、碳配额、合规审查</td>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333; background:#1a1a2e;">
+      <td rowspan="4" style="padding:8px; vertical-align:middle;"><strong>治理层</strong></td>
+      <td>⚙️ 参数</td><td>Quick</td><td>设备运行参数优化</td><td>优化求解器、设备模型</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#1a1a2e;">
+      <td>🛡️ 安全</td><td>规则引擎</td><td>硬约束校验、全局拦截（不用LLM）</td><td>安全规则库、运行边界</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#1a1a2e;">
+      <td>👑 协调</td><td>Deep</td><td>流程编排、冲突仲裁、加权决策</td><td>辩论规则、优先级配置</td>
+    </tr>
+    <tr style="background:#1a1a2e;">
+      <td>📊 报告</td><td>Quick</td><td>多类型报告生成（不参与决策）</td><td>模板引擎、KPI计算、图表生成</td>
+    </tr>
+  </table>
+</div>

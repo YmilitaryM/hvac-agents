@@ -1,0 +1,202 @@
+<h2>四个实际运行问题的设计</h2>
+<p class="subtitle">防喘振 · 启停损耗 · 启动联锁 · 3D可视化</p>
+
+<div class="section">
+  <h3>Q1: 冷机防喘振 — 这是硬约束，必须在优化引擎里内建</h3>
+
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px; margin-bottom:12px;">
+    <p style="color:#e0e0e0; font-size:13px; line-height:1.7;">
+      离心式冷机存在<strong style="color:#e94560;">喘振区</strong>：当负荷率过低、冷凝压力相对蒸发压力过高时，压缩机内部气流失稳，几秒内就能损坏叶轮和轴承。喘振不是效率问题，是<strong style="color:#e94560;">设备安全问题</strong>。
+    </p>
+  </div>
+
+  <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:12px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:8px;">层面</th><th style="padding:8px;">措施</th><th style="padding:8px;">谁负责</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#e94560;">优化约束</td>
+      <td style="padding:8px; font-size:12px;">每台冷机的运行域都有<strong>最小负荷率下限</strong>（如30%），优化引擎不得输出低于此值的方案。如果负荷预测低于单机最小负荷 → 强制方案必须包含热气旁通或冷机停机</td>
+      <td style="padding:8px;">联合优化引擎</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#e9c46a;">过渡保护</td>
+      <td style="padding:8px; font-size:12px;">降负荷过程中，喘振裕度实时监控。如果接近喘振线 → 自动打开热气旁通阀保持最小流量</td>
+      <td style="padding:8px;">参数Agent (实时)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#4caf50;">硬保护</td>
+      <td style="padding:8px; font-size:12px;">喘振检测(振动传感器+压比-流量关系) → 毫秒级触发热气旁通或紧急停机</td>
+      <td style="padding:8px;">安全Agent (规则引擎)</td>
+    </tr>
+  </table>
+
+  <div style="background:#1a1a2e; padding:12px; border-radius:4px; font-size:12px;">
+    <strong style="color:#e9c46a;">优化引擎中的喘振约束建模：</strong><br>
+    <span style="color:#a0a0b0; font-family:monospace; font-size:11px;">
+    对每台冷机 i: PLR<sub>i</sub> ∈ [PLR<sub>min,surge</sub>, 1.0] ∪ {0}<br>
+    其中 PLR<sub>min,surge</sub> 是喘振边界，且随冷凝温度升高而升高（天气越热，喘振区越大）。<br>
+    这意味着：天气越热，单台冷机最低允许负荷率越高，可能<strong>反而需要多开机</strong>。
+    </span>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>Q2: 设备启停损耗 — 启停不是免费的，应该计入优化目标</h3>
+
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px; margin-bottom:12px;">
+    <p style="color:#e0e0e0; font-size:13px; line-height:1.7;">
+      大型冷机启动一次，压缩机电机的冲击电流、轴承的瞬时载荷、润滑系统的压力建立——都有<strong style="color:#e94560;">实际的设备寿命成本</strong>。如果不考虑这些，优化引擎会频繁启停来追逐每一点效率提升，反而加速设备老化。
+    </p>
+  </div>
+
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:8px;">机制</th><th style="padding:8px;">实现</th><th style="padding:8px;">谁负责</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">启动成本等效化</td>
+      <td style="padding:8px; font-size:12px;">每次启停折算为等效经济损失 (元/次) = 维护成本 + 寿命折损 + 停机风险。优化引擎的目标函数加上 Σ(启动次数 × 启动成本)。不是简单比COP，而是比<strong>综合经济性</strong></td>
+      <td style="padding:8px;">联合优化引擎</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">最小运行/停机时间</td>
+      <td style="padding:8px; font-size:12px;">冷机一旦启动，至少运行MinRuntime(如30分钟)；一旦停机，至少冷却MinOffTime(如15分钟)。违反这个约束会严重损害设备</td>
+      <td style="padding:8px;">安全Agent (硬约束)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">累计磨损追踪</td>
+      <td style="padding:8px; font-size:12px;">每台设备维护一个磨损向量：[累计启停次数, 累计运行小时, 重载小时, 喘振事件次数]。可靠性Advocate在审查策略时引用这些数据："3号机本月已启停18次，建议优先使用2号机(本月仅5次)"</td>
+      <td style="padding:8px;">监测Agent 记录<br>可靠性Advocate 引用</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">轮换均衡策略</td>
+      <td style="padding:8px; font-size:12px;">当多台同型号设备时，策略Agent应优先选择累计磨损较低的设备，使设备群整体寿命均衡</td>
+      <td style="padding:8px;">策略Agent (选择偏好)</td>
+    </tr>
+  </table>
+
+  <div style="background:#1a1a2e; padding:12px; border-radius:4px; margin-top:12px; font-size:12px;">
+    <strong style="color:#e9c46a;">优化目标函数的变化：</strong><br>
+    <span style="color:#a0a0b0; font-family:monospace; font-size:11px;">
+    之前: min(电费 + 碳成本)<br>
+    现在: min(电费 + 碳成本 + <span style="color:#e94560;">启停磨损成本</span>)<br>
+    其中: 启停磨损成本 = Σ(每台设备本次启停次数 × 单次磨损成本)<br>
+    单次磨损成本 可配置，默认基于行业经验值，后期从实际维护数据校准
+    </span>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>Q3: 设备启动联锁 — 不是"开"一个指令那么简单</h3>
+
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px; margin-bottom:12px;">
+    <p style="color:#e0e0e0; font-size:13px; line-height:1.7;">
+      启动一台冷机是一个<strong style="color:#e94560;">有序的多步骤过程</strong>。不是给一个"开机"指令就行。而且多台设备之间还有电气联锁（不能同时启动大电机以免跳闸）、水力联锁（必须先建立水流才能启动压缩机）。
+    </p>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">冷机启动的标准联锁序列</div>
+    <div class="mockup-body" style="padding:16px; font-family:monospace; font-size:11px; line-height:2.0; color:#e0e0e0;">
+
+    <div style="background:#0f3460; padding:8px; border-radius:4px; margin-bottom:4px;">
+      <strong>Step 1</strong> 开冷冻水阀门 V1 → 确认全开到位 | 5秒
+    </div>
+    <div style="background:#0f3460; padding:8px; border-radius:4px; margin-bottom:4px;">
+      <strong>Step 2</strong> 开冷却水阀门 V2 → 确认全开到位 | 5秒
+    </div>
+    <div style="background:#0f3460; padding:8px; border-radius:4px; margin-bottom:4px;">
+      <strong>Step 3</strong> 启动冷冻水泵 → 确认流量≥最小流量 | 15秒
+    </div>
+    <div style="background:#0f3460; padding:8px; border-radius:4px; margin-bottom:4px;">
+      <strong>Step 4</strong> 启动冷却水泵 → 确认流量≥最小流量 | 15秒
+    </div>
+    <div style="background:#16213e; padding:8px; border-radius:4px; margin-bottom:4px;">
+      <strong>Step 5</strong> 启动冷却塔风扇 → 低速启动 | 10秒
+    </div>
+    <div style="background:#1a2e1a; padding:8px; border-radius:4px; margin-bottom:4px;">
+      <strong>Step 6</strong> <strong style="color:#4caf50;">联锁检查:</strong> 确认冷冻水流 ✓ | 确认冷却水流 ✓ | 确认油温 ✓ | 确认导叶关闭 ✓
+    </div>
+    <div style="background:#1a2e1a; padding:8px; border-radius:4px; margin-bottom:4px;">
+      <strong>Step 7</strong> 启动压缩机 → 导叶缓慢打开 → 加载至目标负荷率 | 120~300秒
+    </div>
+    <div style="background:#e94560; padding:8px; border-radius:4px;">
+      <strong style="color:#fff;">电气约束:</strong> 如果30秒内已有其他大电机启动 → 延迟本机启动，错开冲击电流
+    </div>
+    </div>
+  </div>
+
+  <div style="background:#1a1a2e; padding:12px; border-radius:4px; margin-top:12px; font-size:12px;">
+    <strong style="color:#4caf50;">设计影响：</strong>
+    <ul style="color:#a0a0b0; margin-top:6px; font-size:12px;">
+      <li>策略的transition_plan中，每个设备不是"start"一个动作，而是一个<strong>启动序列模板</strong>的引用</li>
+      <li>设备模型里预置标准启动序列和停机序列（可配置）</li>
+      <li>电气联锁：大电机启动间隔约束（如≥30秒），优化引擎在排时序时考虑</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>Q4: 3D可视化 — 务实方案：2D为主，3D为辅</h3>
+
+  <div style="display:flex; gap:12px;">
+    <div style="flex:1; background:#1a1a2e; padding:14px; border-radius:8px;">
+      <strong style="color:#4caf50;">2D 交互式原理图 (主)</strong>
+      <ul style="color:#a0a0b0; font-size:12px; margin-top:6px; line-height:1.8;">
+        <li>P&ID风格管线图 + 实时数据叠加</li>
+        <li>点击设备查看详细参数和性能曲线</li>
+        <li>告警高亮 + 设备状态色标</li>
+        <li><strong>行业标准做法</strong>，操作员熟悉</li>
+        <li>开发成本低，可在浏览器实现(D3.js / ECharts)</li>
+      </ul>
+    </div>
+    <div style="flex:1; background:#16213e; padding:14px; border-radius:8px;">
+      <strong style="color:#e9c46a;">3D 数字孪生视图 (辅)</strong>
+      <ul style="color:#a0a0b0; font-size:12px; margin-top:6px; line-height:1.8;">
+        <li>设备空间位置、管路走向一目了然</li>
+        <li>温度场/流场可视化(CFD结果叠加)</li>
+        <li>维护培训场景</li>
+        <li>但对日常运行<strong>实际价值有限</strong></li>
+        <li>开发成本极高(Three.js / Unity)</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="background:#0f3460; padding:14px; border-radius:8px; margin-top:12px;">
+    <strong style="color:#4caf50;">建议：</strong>
+    <p style="color:#e0e0e0; font-size:13px; margin-top:6px; line-height:1.7;">
+      <strong>一期只做2D</strong>。P&ID式交互原理图 + 实时数据Dashboard + 策略时间线视图 + 报告预览。这是操作员真正需要的。<br>
+      <strong>3D 作为后期可选项</strong>，当有了实际的BIM模型或点云数据后再考虑。不要为了炫而做3D——操作员看3D旋转模型的效率远低于看2D原理图。
+    </p>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>四个问题对系统设计的汇总影响</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:8px;">影响点</th><th style="padding:8px;">变化</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">联合优化引擎</td>
+      <td style="padding:8px;">约束新增：喘振边界、最小运行/停机时间、电机启动间隔<br>目标函数新增：启停磨损成本</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">策略transition_plan</td>
+      <td style="padding:8px;">动作从原子指令变为<strong>设备启动/停机序列模板</strong>引用，内置联锁检查点</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">监测Agent</td>
+      <td style="padding:8px;">新增追踪指标：喘振裕度、累计启停次数、设备磨损向量</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">安全Agent</td>
+      <td style="padding:8px;">新增规则：喘振保护、最小运行/停机时间、电机启动间隔保护</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">前端可视化</td>
+      <td style="padding:8px;">一期：2D P&ID原理图 + Dashboard + 策略时间线</td>
+    </tr>
+  </table>
+</div>

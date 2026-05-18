@@ -1,0 +1,201 @@
+<h2>基于性能曲线的联合优化 — 策略与参数一体化</h2>
+<p class="subtitle">设备性能曲线 + 系统合成模型 → 联合优化 → LLM选择 → 执行</p>
+
+<div class="section">
+  <h3>核心问题：为什么不能先选设备再调参数？</h3>
+
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px; margin-bottom:16px;">
+    <p style="color:#e0e0e0; font-size:13px; line-height:1.8;">
+      制冷站是一个<strong style="color:#e94560;">强耦合系统</strong>。冷却塔风扇转速影响冷却水温 → 冷却水温影响冷机COP → 冷机COP影响最优负荷分配 → 负荷分配影响水泵频率。这些变量不能拆开优化。
+    </p>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">系统性能曲面 — 不是单条曲线，是多维曲面</div>
+    <div class="mockup-body" style="padding:16px; font-size:12px;">
+
+    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+      <tr style="background:#1a1a2e; color:#eee;">
+        <th style="padding:8px;">维度</th><th style="padding:8px;">独立变量</th><th style="padding:8px;">耦合关系</th>
+      </tr>
+      <tr style="border-bottom:1px solid #333;">
+        <td style="padding:8px;">冷机</td>
+        <td style="padding:8px;">负荷率、冷冻水出口设定值</td>
+        <td style="padding:8px;">COP = f(负荷率, 冷冻水温, 冷却水温)。冷却水温又取决于冷却塔</td>
+      </tr>
+      <tr style="border-bottom:1px solid #333;">
+        <td style="padding:8px;">冷却塔</td>
+        <td style="padding:8px;">风扇频率、进水温度、水量</td>
+        <td style="padding:8px;">逼近度 = f(风扇频率, 水量, 室外湿球温度)。出水温直接决定冷机冷凝温度</td>
+      </tr>
+      <tr style="border-bottom:1px solid #333;">
+        <td style="padding:8px;">水泵</td>
+        <td style="padding:8px;">频率、阀门开度</td>
+        <td style="padding:8px;">流量影响冷机蒸发器换热效率，也影响冷却塔效率</td>
+      </tr>
+      <tr style="border-bottom:1px solid #333;">
+        <td style="padding:8px;">系统级</td>
+        <td style="padding:8px;">设备组合 + 负荷分配</td>
+        <td style="padding:8px;">总功率 = Σ冷机功率 + Σ泵功率 + Σ塔功率。三者通过热力/水力耦合</td>
+      </tr>
+    </table>
+
+    <div style="background:#0f3460; padding:12px; border-radius:6px; margin-top:12px; font-size:11px;">
+      <strong style="color:#e9c46a;">举例：为什么不能分开算</strong><br>
+      <span style="color:#a0a0b0;">
+      目标负荷500RT。方案A: 1台冷机100%负荷，冷却塔风扇100%。方案B: 2台冷机各50%负荷，冷却塔风扇60%。<br>
+      方案A冷机COP高(单机高效区)，但冷却塔风扇全速耗电大。<br>
+      方案B冷却塔省电，但2台冷机都在低效区，且2台泵运行增加了泵功率。<br>
+      <strong>不联合计算系统总功率，就无法判断哪个更优。</strong>
+      </span>
+    </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>重新设计：联合优化引擎</h3>
+
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px; margin-bottom:16px;">
+    <p style="color:#4caf50; font-size:14px;"><strong>不是"策略Agent选设备 + 参数Agent调参数"，而是"优化引擎一体求解，策略Agent做LLM选择"</strong></p>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">联合优化管线</div>
+    <div class="mockup-body" style="padding:16px; line-height:2.0; font-size:12px;">
+
+    <div style="display:flex; gap:6px; margin-bottom:10px;">
+      <div style="flex:1; background:#0f3460; padding:8px; border-radius:4px; text-align:center; font-size:10px;">
+        <strong>Step 1</strong><br>
+        <span style="color:#888;">负荷特征化</span><br>
+        <span style="color:#666;">预测值+置信区间<br>→ 需求容量范围</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#0f3460; padding:8px; border-radius:4px; text-align:center; font-size:10px;">
+        <strong>Step 2</strong><br>
+        <span style="color:#888;">系统建模</span><br>
+        <span style="color:#666;">加载设备性能曲线<br>→ 构建系统级模型</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#16213e; padding:8px; border-radius:4px; text-align:center; font-size:10px;">
+        <strong>Step 3</strong><br>
+        <span style="color:#888;">联合求解</span><br>
+        <span style="color:#666;"><strong>MINLP求解器</strong><br>一体优化设备组合+参数</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#16213e; padding:8px; border-radius:4px; text-align:center; font-size:10px;">
+        <strong>Step 4</strong><br>
+        <span style="color:#888;">帕累托前沿</span><br>
+        <span style="color:#666;">成本-碳排-可靠性<br>三维非劣解集</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#1a2e1a; padding:8px; border-radius:4px; text-align:center; font-size:10px;">
+        <strong>Step 5</strong><br>
+        <span style="color:#888;">LLM选择</span><br>
+        <span style="color:#666;"><strong>策略Agent(Deep LLM)</strong><br>从帕累托解中推理选择</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#1a2e1a; padding:8px; border-radius:4px; text-align:center; font-size:10px;">
+        <strong>Step 6</strong><br>
+        <span style="color:#888;">结构化输出</span><br>
+        <span style="color:#666;">完整策略+参数组<br>Pydantic Schema</span>
+      </div>
+    </div>
+
+    <div style="background:#1a1a2e; padding:10px; border-radius:4px; margin-top:8px; font-size:10px;">
+      <strong style="color:#e9c46a;">MINLP求解器</strong> 输入：设备性能曲线(多项式拟合) + 当前约束 + 预测负荷 + 电价/碳价<br>
+      <strong style="color:#e9c46a;">MINLP求解器</strong> 输出：3-5个帕累托最优方案 {设备组合, 每台设备参数, 系统COP, 成本, 碳排, 可靠性余量}<br>
+      <strong style="color:#4caf50;">LLM (策略Agent)</strong> 的job：从帕累托解中选一个，给出<strong>为什么选这个</strong>的推理——考虑天气不确定性、设备健康趋势、操作员偏好
+    </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>设备性能曲线 — 从哪里来，如何维护</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">阶段</th><th style="padding:10px;">曲线来源</th><th style="padding:10px;">精度</th><th style="padding:10px;">更新方式</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">仿真阶段 (初期)</td>
+      <td style="padding:10px;">设备铭牌参数 + 厂家样本曲线 → 多项式拟合</td>
+      <td style="padding:10px;">中等</td>
+      <td style="padding:10px;">手动配置</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">实测校准 (后期)</td>
+      <td style="padding:10px;">实际运行数据回归 → 在线更新曲线参数</td>
+      <td style="padding:10px;">高</td>
+      <td style="padding:10px;">自动周期性重拟合</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">退化追踪 (持续)</td>
+      <td style="padding:10px;">曲线偏移量 = 实际COP - 预期COP → 量化性能衰减</td>
+      <td style="padding:10px;">退化趋势</td>
+      <td style="padding:10px;">监测Agent提供退化信号</td>
+    </tr>
+  </table>
+
+  <div style="background:#1a1a2e; padding:12px; border-radius:6px; margin-top:12px; font-family:monospace; font-size:11px; line-height:1.6; color:#e0e0e0;">
+    <strong style="color:#4caf50;">冷机COP曲线的数学表示 (多项式拟合)：</strong><br>
+    COP(PLR, T<sub>chw</sub>, T<sub>cw</sub>) = a₀ + a₁·PLR + a₂·PLR² + a₃·T<sub>chw</sub> + a₄·T<sub>cw</sub> + a₅·T<sub>cw</sub>² + a₆·PLR·T<sub>cw</sub><br>
+    <span style="color:#888;">PLR = 部分负荷率 (0~1), Tchw = 冷冻水出口温度, Tcw = 冷却水入口温度</span><br>
+    <span style="color:#888;">系数 [a₀..a₆] 由厂家数据或运行数据回归得到，定期更新</span>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>这对 Agent 设计意味着什么？</h3>
+
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:8px;">变化</th><th style="padding:8px;">之前</th><th style="padding:8px;">现在</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">策略Agent</td>
+      <td style="padding:8px;">LLM推理 + 简单枚举设备组合</td>
+      <td style="padding:8px;">调用联合优化引擎获取帕累托解集 → LLM从解集中做<strong>有依据的</strong>选择</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">参数Agent</td>
+      <td style="padding:8px;">独立做连续参数优化</td>
+      <td style="padding:8px; color:#e94560;">角色变化：不再独立做优化决策，变为<strong>实时微调控制器</strong><br>在策略执行期间，根据实时负荷波动做±5%范围内的小幅调整</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">新增</td>
+      <td style="padding:8px;">—</td>
+      <td style="padding:8px; color:#4caf50;"><strong>联合优化引擎</strong> (非Agent，是数值计算服务)<br>MINLP求解 + 帕累托前沿 + 性能曲线管理</td>
+    </tr>
+  </table>
+
+  <div style="background:#1a2e1a; padding:12px; border-radius:8px; margin-top:12px;">
+    <p style="color:#4caf50; font-size:13px;"><strong>参数Agent的新定位：</strong></p>
+    <p style="color:#e0e0e0; font-size:12px;">
+      策略Agent输出的方案包含了每个设备的目标参数（如冷机出水7°C，泵频率40Hz）。参数Agent在策略执行期间实时监控，当实际负荷偏离预测值在±5%以内时，自动微调参数（如将出水调为6.8°C或7.2°C）而不需要重新走策略生成流程。如果偏差超过5%，则触发新的策略生成循环。
+    </p>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>更新后的 10 Agent + 1 优化引擎</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:8px;">层</th><th style="padding:8px;">组件</th><th style="padding:8px;">类型</th><th style="padding:8px;">职责</th>
+    </tr>
+    <tr><td rowspan="3" style="padding:8px; background:#0f3460;">感知层</td><td>🔍 监测Agent</td><td>LLM Agent</td><td>设备状态 + 异常检测 + 性能曲线退化追踪</td></tr>
+    <tr><td>📈 预测Agent</td><td>LLM Agent</td><td>多尺度冷负荷预测</td></tr>
+    <tr><td>🎯 策略Agent</td><td>LLM Agent<br>+ 优化引擎</td><td style="font-size:11px;">调用联合优化引擎 → LLM选择 → 生成完整策略(含参数)</td></tr>
+
+    <tr><td rowspan="3" style="padding:8px; background:#1a2e1a;">辩论层</td><td>🛡️ 可靠性Advocate</td><td>LLM Agent</td><td>审查策略的安全余量和设备健康风险</td></tr>
+    <tr><td>⚡ 效率Advocate</td><td>LLM Agent</td><td>审查策略的能耗和经济性</td></tr>
+    <tr><td>🌿 合规Advocate</td><td>LLM Agent</td><td>审查策略的碳排放和法规合规性</td></tr>
+
+    <tr><td rowspan="4" style="padding:8px; background:#1a1a2e;">决策层</td><td>👑 协调Agent</td><td>LLM Agent</td><td>辩论仲裁 + 加权决策</td></tr>
+    <tr><td>🛡️ 安全Agent</td><td>规则引擎</td><td>硬约束校验（非LLM）</td></tr>
+    <tr><td>⚙️ 参数Agent</td><td>控制器</td><td style="font-size:11px; color:#e9c46a;">实时微调（±5%范围内），触发新策略(>5%偏差)</td></tr>
+    <tr><td>📊 报告Agent</td><td>LLM Agent</td><td>多类型报告生成（只读消费者）</td></tr>
+
+    <tr style="background:#2a1a2e;"><td colspan="2" style="padding:8px; color:#4caf50;"><strong>⚡ 联合优化引擎</strong> (新增)</td><td>数值服务</td><td style="font-size:11px;">MINLP求解 + 性能曲线管理 + 帕累托前沿</td></tr>
+  </table>
+</div>

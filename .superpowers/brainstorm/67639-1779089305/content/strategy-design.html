@@ -1,0 +1,182 @@
+<h2>控制策略生成 — 完整设计</h2>
+<p class="subtitle">混合架构：优化算法枚举 + LLM推理选择 + 结构化输出 + 全生命周期管理</p>
+
+<div class="section">
+  <h3>策略到底是什么？— 结构化定义</h3>
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px; font-family:monospace; font-size:11px; line-height:1.6; color:#e0e0e0;">
+{
+  <span style="color:#e9c46a;">"strategy_id"</span>: "sched_20260518_1500_001",
+  <span style="color:#e9c46a;">"trigger_type"</span>: "scheduled",       <span style="color:#666;">// scheduled | load_change | fault | price_signal | manual</span>
+  <span style="color:#e9c46a;">"trigger_time"</span>: "2026-05-18T15:00:00",
+
+  <span style="color:#e9c46a;">"context"</span>: {
+    "current_load_rt": 850,              "predicted_load_rt": 520,
+    "load_ci_lower": 450,                "load_ci_upper": 620,
+    "electricity_price": 0.82,           "carbon_intensity": 0.58,
+    "outdoor_wb_temp": 24.5
+  },
+
+  <span style="color:#e9c46a;">"actions"</span>: [
+    {"seq": 1, "device": "chiller_2",    "action": "stop"},
+    {"seq": 2, "device": "valve_v3",     "action": "close"},
+    {"seq": 3, "device": "pump_3",       "action": "set_frequency", "value": 30},
+    {"seq": 4, "device": "chiller_1",    "action": "set_setpoint", "param": "chw_temp", "value": 6.5}
+  ],
+
+  <span style="color:#e9c46a;">"expected_effect"</span>: {
+    "cop_improvement": "+12%",           "energy_saving_kwh_per_h": 120,
+    "carbon_saving_kg_per_h": 70,        "cost_saving_yuan_per_h": 98
+  },
+
+  <span style="color:#e9c46a;">"preconditions"</span>: [
+    "total_load < 550RT 持续超过10分钟",
+    "chiller_1 运行状态正常",
+    "备用机 chiller_3 处于热备状态（预热完成，可在5min内启动）",
+    "室外湿球温度 < 26°C"
+  ],
+
+  <span style="color:#e9c46a;">"risk_mitigations"</span>: [
+    "监控出水温度偏差 > 1°C 则告警",
+    "若负荷反升至 > 650RT，自动启动 chiller_3"
+  ],
+
+  <span style="color:#e9c46a;">"status"</span>: "draft"              <span style="color:#666;">// draft → under_review → approved/rejected → scheduled → executing → completed/aborted</span>
+}
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>策略类型 — 不是所有策略都一样</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:8px;">策略类型</th><th style="padding:8px;">触发条件</th><th style="padding:8px;">决策本质</th><th style="padding:8px;">求解方法</th><th style="padding:8px;">审核强度</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">负荷跟随</td><td style="padding:8px;">预测负荷变化 > 单机容量20%</td><td style="padding:8px;">离散组合优化</td><td style="padding:8px;">枚举可行组合 + COP曲线查表</td><td style="padding:8px;">常规审查</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">模式切换</td><td style="padding:8px;">室外温度/电价超过阈值</td><td style="padding:8px;">规则+条件判断</td><td style="padding:8px;">决策树 + LLM边界情况判断</td><td style="padding:8px;">严格审查(全票)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">故障响应</td><td style="padding:8px;">设备异常/告警</td><td style="padding:8px;">约束满足</td><td style="padding:8px;">重排设备组合，满足安全约束</td><td style="padding:8px;">加速通道(跳过辩论)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">需求响应</td><td style="padding:8px;">电网信号/电价尖峰</td><td style="padding:8px;">经济优化</td><td style="padding:8px;">成本函数最小化 + 约束</td><td style="padding:8px;">常规审查</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px;">设备轮换</td><td style="padding:8px;">累计运行时间不均</td><td style="padding:8px;">调度优化</td><td style="padding:8px;">磨损均衡算法</td><td style="padding:8px;">轻量审查</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>策略Agent内部架构 — 混合生成引擎</h3>
+  <div class="mockup">
+    <div class="mockup-header">算法枚举可行解 + LLM做上下文推理，各司其职</div>
+    <div class="mockup-body" style="padding:16px; line-height:2.0; font-size:12px;">
+
+    <div style="display:flex; gap:8px; margin-bottom:10px;">
+      <div style="flex:1; background:#0f3460; padding:10px; border-radius:6px; text-align:center;">
+        <strong>Step 1: 触发分类</strong><br>
+        <span style="color:#888; font-size:10px;">是什么触发了策略生成？<br>确定策略类型和审核级别</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#0f3460; padding:10px; border-radius:6px; text-align:center;">
+        <strong>Step 2: 约束提取</strong><br>
+        <span style="color:#888; font-size:10px;">从监测Agent+安全Agent<br>获取当前设备约束边界</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#16213e; padding:10px; border-radius:6px; text-align:center;">
+        <strong>Step 3: 方案枚举</strong><br>
+        <span style="color:#888; font-size:10px;"><strong>优化求解器</strong>枚举可行设备组合<br>每个方案计算COP/成本/碳排</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#1a2e1a; padding:10px; border-radius:6px; text-align:center;">
+        <strong>Step 4: LLM选择</strong><br>
+        <span style="color:#888; font-size:10px;"><strong>Deep LLM</strong>基于上下文推理<br>从Top-3方案中选最优</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#1a2e1a; padding:10px; border-radius:6px; text-align:center;">
+        <strong>Step 5: 结构化输出</strong><br>
+        <span style="color:#888; font-size:10px;">Pydantic Schema约束<br>生成完整策略对象</span>
+      </div>
+    </div>
+
+    <div style="background:#1a1a2e; padding:12px; border-radius:6px; margin-top:12px; font-size:11px;">
+      <strong style="color:#e9c46a;">为什么Step 3不能用LLM做？</strong><br>
+      <span style="color:#a0a0b0;">
+      制冷站设备组合是组合优化问题。中型站(5台冷机+5台冷却塔+10台泵)的组合空间巨大，且每台设备有自己非线性的COP曲线和约束（最小流量、喘振边界、水泵最小频率）。LLM不擅长穷举和精确数值计算——这必须由优化求解器完成。LLM的价值在Step 4：从求解器给出的Top-3方案中，根据天气预报置信度、设备健康趋势、历史策略效果等"软信息"做最终选择。
+      </span>
+    </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>策略生命周期</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:8px;">状态</th><th style="padding:8px;">谁操作</th><th style="padding:8px;">做什么</th><th style="padding:8px;">下一状态</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#888;">draft</td>
+      <td style="padding:8px;">策略Agent</td><td style="padding:8px;">生成策略草案</td><td style="padding:8px;">→ under_review</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#e9c46a;">under_review</td>
+      <td style="padding:8px;">3 Advocate + 协调Agent</td><td style="padding:8px;">辩论审查</td><td style="padding:8px;">→ approved / rejected</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#4caf50;">approved</td>
+      <td style="padding:8px;">RL审核引擎</td><td style="padding:8px;">置信度评估 → 自动批或推人工</td><td style="padding:8px;">→ scheduled</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#e94560;">rejected</td>
+      <td style="padding:8px;">—</td><td style="padding:8px;">记录驳回原因，写入Memory供RL学习</td><td style="padding:8px;">终端状态</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#2196f3;">scheduled</td>
+      <td style="padding:8px;">调度引擎</td><td style="padding:8px;">注册定时任务，等待触发时间</td><td style="padding:8px;">→ executing / expired</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#ff9800;">executing</td>
+      <td style="padding:8px;">调度引擎 + 安全Agent</td><td style="padding:8px;">前置条件检查 → 逐条下发指令 → 监控执行</td><td style="padding:8px;">→ completed / aborted</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#4caf50;">completed</td>
+      <td style="padding:8px;">Memory Log</td><td style="padding:8px;">记录实际效果，触发RL+反思</td><td style="padding:8px;">终端状态</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:8px; color:#e94560;">aborted</td>
+      <td style="padding:8px;">Memory Log</td><td style="padding:8px;">记录失败原因(前置条件不满足/执行异常)，触发反思</td><td style="padding:8px;">终端状态</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>策略的Memory机制 — 借鉴TradingAgents的延迟反思</h3>
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px; font-size:13px; line-height:1.8;">
+    <p style="color:#4caf50;"><strong>每次策略执行后，两路反馈注入Memory：</strong></p>
+
+    <div style="display:flex; gap:12px; margin-top:10px;">
+      <div style="flex:1; background:#0f3460; padding:10px; border-radius:6px;">
+        <strong style="color:#e9c46a;">RL信号（数值）</strong>
+        <p style="color:#a0a0b0; font-size:11px;">
+          实际COP - 预期COP = 奖励<br>
+          实际节能量 - 预期节能量 = 奖励<br>
+          → 更新RL模型权重
+        </p>
+      </div>
+      <div style="flex:1; background:#0f3460; padding:10px; border-radius:6px;">
+        <strong style="color:#9c27b0;">LLM反思（文本）</strong>
+        <p style="color:#a0a0b0; font-size:11px;">
+          "2026-05-15减机策略：COP从4.8升至5.3(+10.4%)，低于预期的+12%。原因是冷却塔逼近度在单机高负荷下上升了0.8°C，未在策略中考虑。下次类似工况需增加冷却塔风扇调速的联动动作。"
+        </p>
+      </div>
+    </div>
+
+    <p style="color:#888; font-size:11px; margin-top:12px;">
+      LLM反思文本被注入到策略Agent的未来Prompt中，类似TradingAgents的 past_context 机制。当策略Agent下次遇到相似工况，Prompt中会包含："历史相似工况下，减机后COP平均提升10.3%，但需注意冷却塔逼近度上升问题——建议联动调节冷却塔风扇。"
+    </p>
+  </div>
+</div>

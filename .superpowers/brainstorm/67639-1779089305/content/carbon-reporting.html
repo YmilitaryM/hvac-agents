@@ -1,0 +1,141 @@
+<h2>碳管理 + 报告生成 + 标准查询</h2>
+<p class="subtitle">三个新需求的设计方案</p>
+
+<div class="section">
+  <h3>Q1: 碳排放专家 — 独立还是合并？</h3>
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px; margin-bottom:16px;">
+    <p style="color:#e0e0e0; font-size:14px;">能源专家关注的是 <strong style="color:#e9c46a;">省钱</strong>（电价峰谷、需量管理），碳排放专家关注的是 <strong style="color:#4caf50;">合规与减碳</strong>（排放核算、碳配额、碳交易）。</p>
+    <p style="color:#ff9800; font-size:14px; margin-top:8px;">推荐：<strong>拆分为两个独立专家</strong>，因为它们的优化目标经常冲突。</p>
+    <p style="color:#a0a0b0; font-size:12px; margin-top:4px;">例如：峰谷套利建议低谷多开机组蓄冷 → 但此时电网碳排放因子更高（煤电基荷）→ 两个专家给相反建议</p>
+  </div>
+
+  <table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">维度</th><th style="padding:10px;">能源专家</th><th style="padding:10px;">碳排放专家</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">核心目标</td><td style="padding:10px;">最小化能源成本</td><td style="padding:10px;">最小化碳排放 + 合规达标</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">知识体系</td><td style="padding:10px;">电价政策、需量费率、电力市场规则</td><td style="padding:10px;">GHG Protocol、ISO 14064、碳配额、CCER</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">关键指标</td><td style="padding:10px;">单位冷量成本 (元/RT·h)、总电费</td><td style="padding:10px;">碳排放强度 (kgCO₂/RT·h)、配额余量</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">优化手段</td><td style="padding:10px;">峰谷套利、需量控制、设备组合优化</td><td style="padding:10px;">清洁能源时段优先、碳配额交易建议</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:28px;">
+  <h3>Q2: 报告生成 — 专门的报告Agent</h3>
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px; margin-bottom:16px;">
+    <strong style="color:#4caf50;">新增：📊 报告Agent</strong>
+    <p style="color:#e0e0e0; font-size:14px; margin-top:8px;">不参与决策辩论，而是<strong>消费其他Agent的输出</strong>，生成多类型报告。</p>
+  </div>
+
+  <div style="display:flex; gap:12px; margin-bottom:16px;">
+    <div style="flex:1; background:#0f3460; padding:12px; border-radius:6px;">
+      <strong style="color:#e94560;">碳排放报告</strong>
+      <ul style="color:#a0a0b0; font-size:12px; margin-top:6px;">
+        <li>碳排放总量与强度趋势</li>
+        <li>碳配额使用进度</li>
+        <li>减排措施效果评估</li>
+        <li>合规达标状态</li>
+      </ul>
+    </div>
+    <div style="flex:1; background:#0f3460; padding:12px; border-radius:6px;">
+      <strong style="color:#e9c46a;">能效报告</strong>
+      <ul style="color:#a0a0b0; font-size:12px; margin-top:6px;">
+        <li>系统COP/EER趋势</li>
+        <li>各设备能效对比</li>
+        <li>能耗异常分析</li>
+        <li>节能措施效果</li>
+      </ul>
+    </div>
+    <div style="flex:1; background:#0f3460; padding:12px; border-radius:6px;">
+      <strong style="color:#4caf50;">运行报告</strong>
+      <ul style="color:#a0a0b0; font-size:12px; margin-top:6px;">
+        <li>设备运行时长与启停统计</li>
+        <li>异常事件汇总</li>
+        <li>策略执行效果评估</li>
+        <li>维护建议</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px;">
+    <strong style="color:#4caf50;">报告生成流程 (LLM驱动)</strong>
+    <div style="color:#e0e0e0; font-size:13px; line-height:1.8; margin-top:8px;">
+      <span style="color:#666;">1. 数据聚合</span> → 从时序库+事件库拉取原始数据<br>
+      <span style="color:#666;">2. 指标计算</span> → 按行业标准公式计算KPIs<br>
+      <span style="color:#666;">3. 趋势分析</span> → LLM分析数据趋势、发现异常模式<br>
+      <span style="color:#666;">4. 结论生成</span> → LLM基于模板+数据生成叙述性分析<br>
+      <span style="color:#666;">5. 建议生成</span> → 调用领域专家Agent获取针对性建议<br>
+      <span style="color:#666;">6. 多格式输出</span> → Markdown/PDF/Excel/看板
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:28px;">
+  <h3>Q3: 行业标准查询 — 共享RAG知识库</h3>
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px;">
+    <strong style="color:#4caf50;">不是新增Agent，而是共享工具 + 知识库</strong>
+    <p style="color:#e0e0e0; font-size:14px; margin-top:8px;">所有专家Agent通过同一个 RAG 工具查询标准，在辩论时引用标准作为论据。</p>
+  </div>
+
+  <table style="width:100%; border-collapse:collapse; margin-top:12px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">标准类型</th><th style="padding:10px;">具体标准</th><th style="padding:10px;">主要使用者</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">暖通设计</td><td style="padding:10px;">GB 50736、ASHRAE 90.1、GB 50189</td><td style="padding:10px;">暖通专家</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">机电设备</td><td style="padding:10px;">GB 19577 (冷水机组能效)、GB 18613 (电机能效)</td><td style="padding:10px;">机电专家</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">碳排放</td><td style="padding:10px;">ISO 14064、GHG Protocol、GB/T 32150</td><td style="padding:10px;">碳排放专家</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">能源管理</td><td style="padding:10px;">GB/T 23331 (ISO 50001)、GB 17167 (能源计量)</td><td style="padding:10px;">能源专家</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">碳排放核算</td><td style="padding:10px;">企业温室气体排放核算方法与报告指南、电网排放因子</td><td style="padding:10px;">碳排放专家、报告Agent</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">运行管理</td><td style="padding:10px;">GB/T 17981 (空调通风系统经济运行)、JGJ/T 348</td><td style="padding:10px;">策略Agent、参数Agent</td>
+    </tr>
+  </table>
+
+  <div style="background:#16213e; padding:12px; border-radius:8px; margin-top:12px; font-size:13px;">
+    <strong style="color:#2196f3;">技术实现：</strong>
+    <span style="color:#a0a0b0;">
+      标准文档 → PDF解析/分段 → Embedding → 向量库 → 各Agent通过 RAG Tool 查询<br>
+      查询示例： "GB 50736 中关于制冷站能效限值的规定是什么？"
+    </span>
+  </div>
+</div>
+
+<div class="section" style="margin-top:28px;">
+  <h3>更新后的 Agent 全景图 — 11 Agent</h3>
+  <table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:8px;">类别</th><th style="padding:8px;">Agent</th><th style="padding:8px;">角色</th><th style="padding:8px;">参与决策?</th>
+    </tr>
+    <tr><td rowspan="3" style="padding:8px; background:#16213e;">执行层</td><td>🔍 监测</td><td>设备状态、异常检测</td><td>数据提供</td></tr>
+    <tr><td>📈 预测</td><td>冷负荷预测</td><td>数据提供</td></tr>
+    <tr><td>🎯 策略</td><td>生成运行策略</td><td style="color:#4caf50;">提案者</td></tr>
+
+    <tr><td rowspan="4" style="padding:8px; background:#1a2e1a;">专家层</td><td>🌡️ 暖通</td><td>热力学、制冷循环、水力平衡</td><td style="color:#e9c46a;">审查者</td></tr>
+    <tr><td>⚡ 机电</td><td>设备机械约束、电气安全</td><td style="color:#e9c46a;">审查者</td></tr>
+    <tr><td>💰 能源</td><td>能效优化、电力成本</td><td style="color:#e9c46a;">审查者</td></tr>
+    <tr><td>🌿 碳排放 <span style="color:#4caf50;">新增</span></td><td>碳排放核算、碳配额管理</td><td style="color:#e9c46a;">审查者</td></tr>
+
+    <tr><td rowspan="4" style="padding:8px; background:#1a1a2e;">治理层</td><td>⚙️ 参数</td><td>设备运行参数优化</td><td>执行细化</td></tr>
+    <tr><td>🛡️ 安全</td><td>硬约束校验、全局拦截</td><td style="color:#e94560;">否决者</td></tr>
+    <tr><td>👑 协调</td><td>流程编排、冲突仲裁</td><td style="color:#9c27b0;">仲裁者</td></tr>
+    <tr><td>📊 报告 <span style="color:#4caf50;">新增</span></td><td>多类型报告生成与发布</td><td>不参与决策</td></tr>
+  </table>
+</div>

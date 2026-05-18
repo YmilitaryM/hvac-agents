@@ -1,0 +1,18 @@
+{"type":"server-started","port":60129,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:60129","screen_dir":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content","state_dir":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/state"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/waiting.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/tech-stack.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/llm-role.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/strategy-layer.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/rl-review.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/four-questions.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/domain-experts.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/carbon-reporting.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/trading-agents-analysis.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/final-architecture.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/rethink-agents.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/report-design.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/strategy-design.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/performance-curve-opt.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/curves-and-stability.html"}
+{"type":"screen-added","file":"/Users/ymilitarym/hp-2026/hvac-agents/.superpowers/brainstorm/67639-1779089305/content/practical-issues.html"}
+{"type":"server-stopped","reason":"idle timeout"}

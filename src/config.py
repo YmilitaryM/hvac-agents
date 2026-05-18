@@ -25,7 +25,7 @@ class SimulationConfig:
 class OptimizationConfig:
     solver_timeout_sec: float = 30.0
     pareto_max_solutions: int = 5
-    wear_cost_per_start: dict = field(default_factory=lambda: {
+    wear_cost_per_start: dict[str, float] = field(default_factory=lambda: {
         "chiller": 150.0,
         "pump": 30.0,
         "cooling_tower": 20.0,
@@ -60,10 +60,16 @@ class Config:
 
     @classmethod
     def from_env(cls) -> "Config":
+        provider = os.getenv("LLM_PROVIDER", "anthropic")
+        api_key = (
+            os.getenv("ANTHROPIC_API_KEY")
+            if provider == "anthropic"
+            else os.getenv("OPENAI_API_KEY")
+        )
         return cls(
             llm=LLMConfig(
-                provider=os.getenv("LLM_PROVIDER", "anthropic"),
-                api_key=os.getenv("ANTHROPIC_API_KEY") or os.getenv("OPENAI_API_KEY"),
+                provider=provider,
+                api_key=api_key,
                 base_url=os.getenv("LLM_BASE_URL"),
             ),
             debug=os.getenv("DEBUG", "").lower() == "true",

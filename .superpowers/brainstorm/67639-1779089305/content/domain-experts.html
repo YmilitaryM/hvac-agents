@@ -1,0 +1,137 @@
+<h2>领域专家 Agent 设计 — 知识注入 vs 独立Agent</h2>
+<p class="subtitle">三种方案对比：领域知识如何融入多智能体决策</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>知识库模式 — 专家知识作为 RAG 检索库</h3>
+      <p>专家知识存储在向量库中，策略/参数Agent按需检索。简单但不参与辩论。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优势</h4><ul><li>架构简单，不增加Agent数量</li><li>知识集中管理，易于更新</li></ul></div>
+        <div class="cons"><h4>劣势</h4><ul><li>知识是被动的，不会主动"质疑"</li><li>缺少多视角碰撞，容易漏掉跨领域问题</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">B (推荐)</div>
+    <div class="content">
+      <h3>专家作为"审查Agent"参与辩论</h3>
+      <p>3位领域专家Agent不生成策略，但必须在策略审核环节发表意见。策略Agent提案 → 专家交叉审查 → 协调Agent汇总。</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>优势</h4><ul><li>每个策略经过多学科交叉验证</li><li>专家Agent主动发现跨领域冲突</li><li>辩论质量显著提升</li><li>每个专家可独立更新知识</li></ul></div>
+        <div class="cons"><h4>劣势</h4><ul><li>Agent数量从6→9，编排更复杂</li><li>LLM调用次数增加</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:28px;">
+  <h3>推荐架构：9 Agent 体系</h3>
+  <table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">类别</th><th style="padding:10px;">Agent</th><th style="padding:10px;">角色</th><th style="padding:10px;">知识来源</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#16213e;">
+      <td style="padding:10px;" rowspan="3" style="vertical-align:middle;"><strong>执行Agent</strong><br><span style="font-size:11px; color:#a0a0b0;">做事的</span></td>
+      <td style="padding:10px;">🔍 监测Agent</td><td style="padding:10px;">设备状态、异常检测</td><td style="padding:10px;">传感器数据</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#16213e;">
+      <td style="padding:10px;">📈 预测Agent</td><td style="padding:10px;">冷负荷预测</td><td style="padding:10px;">ML模型+天气</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#16213e;">
+      <td style="padding:10px;">🎯 策略Agent</td><td style="padding:10px;">生成运行策略</td><td style="padding:10px;">预测+设备状态+电价</td>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333; background:#1a2e1a;">
+      <td style="padding:10px;" rowspan="3" style="vertical-align:middle;"><strong>专家Agent</strong><br><span style="font-size:11px; color:#a0a0b0;">审查的</span></td>
+      <td style="padding:10px;">🌡️ 暖通专家</td><td style="padding:10px;">热力学可行性、制冷循环效率、管路水力平衡</td><td style="padding:10px;">ASHRAE标准+设计规范+制冷原理</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#1a2e1a;">
+      <td style="padding:10px;">⚡ 机电专家</td><td style="padding:10px;">设备机械约束、电气安全、启停寿命、振动/噪声</td><td style="padding:10px;">设备手册+电气规范+维护规程</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#1a2e1a;">
+      <td style="padding:10px;">💰 能源专家</td><td style="padding:10px;">能效优化、碳排放、需量管理、峰谷套利</td><td style="padding:10px;">电价政策+碳交易规则+能效标准</td>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333; background:#1a1a2e;">
+      <td style="padding:10px;" rowspan="3" style="vertical-align:middle;"><strong>治理Agent</strong><br><span style="font-size:11px; color:#a0a0b0;">管流程的</span></td>
+      <td style="padding:10px;">⚙️ 参数Agent</td><td style="padding:10px;">设备运行参数优化</td><td style="padding:10px;">设备模型+优化算法</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333; background:#1a1a2e;">
+      <td style="padding:10px;">🛡️ 安全Agent</td><td style="padding:10px;">硬约束校验、全局拦截</td><td style="padding:10px;">安全规程+运行边界</td>
+    </tr>
+    <tr style="background:#1a1a2e;">
+      <td style="padding:10px;">👑 协调Agent</td><td style="padding:10px;">流程编排、冲突仲裁</td><td style="padding:10px;">辩论规则+优先级策略</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:28px;">
+  <h3>专家 Agent 如何参与辩论？</h3>
+  <div style="background:#1a1a2e; padding:16px; border-radius:8px; line-height:1.8; font-size:13px;">
+
+    <div style="display:flex; gap:12px; margin-bottom:12px;">
+      <div style="flex:1; background:#0f3460; padding:12px; border-radius:6px; text-align:center;">
+        <strong style="color:#4caf50;">策略Agent提案</strong><br>
+        <span style="color:#a0a0b0; font-size:12px;">"15:00减机，关2号主机"</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#1a2e1a; padding:12px; border-radius:6px; text-align:center;">
+        <strong style="color:#e9c46a;">3位专家并行审查</strong><br>
+        <span style="color:#a0a0b0; font-size:12px;">各从自身领域给出意见</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#2a1a3e; padding:12px; border-radius:6px; text-align:center;">
+        <strong style="color:#9c27b0;">协调Agent汇总</strong><br>
+        <span style="color:#a0a0b0; font-size:12px;">加权决策</span>
+      </div>
+    </div>
+
+    <strong style="color:#ff9800;">每个专家的审查输出（结构化）：</strong>
+    <div style="color:#e0e0e0; margin-top:8px; font-family:monospace; font-size:12px;">
+    { "expert": "暖通专家",<br>
+    &nbsp;&nbsp;"verdict": "条件批准",  <span style="color:#666;">// 批准 / 条件批准 / 驳回</span><br>
+    &nbsp;&nbsp;"concerns": ["减机后需确认1号机出水温度设定值下调0.5°C","注意冷却塔逼近度可能上升"],<br>
+    &nbsp;&nbsp;"confidence": 0.82 }<br><br>
+    { "expert": "机电专家",<br>
+    &nbsp;&nbsp;"verdict": "批准",<br>
+    &nbsp;&nbsp;"concerns": ["2号机本月已启停12次，建议减机时记录累计启停次数"],<br>
+    &nbsp;&nbsp;"confidence": 0.91 }<br><br>
+    { "expert": "能源专家",<br>
+    &nbsp;&nbsp;"verdict": "驳回",<br>
+    &nbsp;&nbsp;"concerns": ["15:00-16:00是电价尖峰时段，单机运行COP可能下降导致总电费反而增加","建议推迟到16:00后减机，或提前到14:30利用蓄冷罐过渡"],<br>
+    &nbsp;&nbsp;"confidence": 0.78 }
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:28px;">
+  <h3>不同工况下的专家参与程度</h3>
+  <table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">工况</th><th style="padding:10px;">参与方式</th><th style="padding:10px;">时延要求</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">常规参数微调</td>
+      <td style="padding:10px;">不调用专家，参数Agent直接调整</td>
+      <td style="padding:10px;">秒级</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">加减机决策</td>
+      <td style="padding:10px;">3位专家并行审查，2/3通过即执行</td>
+      <td style="padding:10px;">分钟级</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">模式切换（制冷↔自由冷却）</td>
+      <td style="padding:10px;">3位专家串行深度审查，需全票通过</td>
+      <td style="padding:10px;">10分钟级</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">紧急故障处理</td>
+      <td style="padding:10px;">跳过专家，安全Agent+实时控制层直接动作</td>
+      <td style="padding:10px;">毫秒级</td>
+    </tr>
+  </table>
+</div>

@@ -1,0 +1,77 @@
+<h2>LLM 在制冷站控制系统中的角色定位</h2>
+<p class="subtitle">推荐：分层架构 — 实时控制用传统算法，智能分析与交互用LLM</p>
+
+<div class="mockup">
+  <div class="mockup-header">推荐架构：三层分离</div>
+  <div class="mockup-body" style="font-family: monospace; font-size: 13px; line-height: 1.8; padding: 20px;">
+
+    <div style="background:#1a1a2e; color:#e94560; padding:12px; border-radius:8px; margin-bottom:16px; text-align:center; font-size:15px;">
+      🧠 智能层 (LLM) — 秒~分钟级响应<br>
+      <span style="color:#a0a0b0; font-size:12px;">自然语言交互 · 异常解释 · 策略建议 · 报告生成</span>
+    </div>
+
+    <div style="text-align:center; color:#666; margin:8px 0;">▼ 建议 / 查询 ▲</div>
+
+    <div style="background:#16213e; color:#0f3460; padding:12px; border-radius:8px; margin-bottom:16px; text-align:center; font-size:15px; background:#16213e;">
+      <span style="color:#e9c46a;">⚙️ 优化层 (数值算法) — 分钟级响应</span><br>
+      <span style="color:#a0a0b0; font-size:12px;">负荷预测 · 策略优化 · 参数寻优 · 能效分析</span>
+    </div>
+
+    <div style="text-align:center; color:#666; margin:8px 0;">▼ 控制指令 / 设备数据 ▲</div>
+
+    <div style="background:#0f3460; color:#e94560; padding:12px; border-radius:8px; text-align:center; font-size:15px;">
+      ⚡ 实时层 (确定性控制) — 毫秒~秒级响应<br>
+      <span style="color:#a0a0b0; font-size:12px;">PID调节 · 设备启停 · 安全保护 · 故障切换</span>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:20px;">
+  <div class="option" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="letter">推荐</div>
+    <div class="content">
+      <h3>分层混合架构 — LLM 负责智能分析和人机交互，核心控制用传统算法</h3>
+      <div class="pros-cons">
+        <div class="pros"><h4>为什么这样设计</h4>
+          <ul>
+            <li><strong>安全可靠</strong>：实时控制层用确定性算法（PID、MPC），不受LLM幻觉影响</li>
+            <li><strong>LLM发挥长处</strong>：自然语言交互、异常根因分析、策略推荐——这些是LLM擅长的</li>
+            <li><strong>人机协作</strong>：LLM的建议需要操作员确认后才下发到控制层，保留人工审核环节</li>
+            <li><strong>工业最佳实践</strong>：PLC/DCS做实时控制，AI做上层智能，是成熟模式</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>各层LLM具体职责</h3>
+  <table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px; text-align:left;">能力</th>
+      <th style="padding:10px; text-align:left;">具体场景</th>
+      <th style="padding:10px; text-align:left;">技术方式</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">自然语言交互</td>
+      <td style="padding:10px;">"现在各机组COP是多少？"</td>
+      <td style="padding:10px;">NL2SQL / Function Calling</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">异常诊断解释</td>
+      <td style="padding:10px;">"为什么2号机组出水温度偏高？"</td>
+      <td style="padding:10px;">RAG + 历史数据分析</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">策略建议</td>
+      <td style="padding:10px;">"当前负荷下建议增开1台机组"</td>
+      <td style="padding:10px;">数据推演 + 自然语言生成</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">报告生成</td>
+      <td style="padding:10px;">日报/周报/能效报告</td>
+      <td style="padding:10px;">模板 + LLM填充</td>
+    </tr>
+  </table>
+</div>

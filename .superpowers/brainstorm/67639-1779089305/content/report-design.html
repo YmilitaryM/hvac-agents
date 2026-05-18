@@ -1,0 +1,149 @@
+<h2>报告子系统设计</h2>
+<p class="subtitle">报告Agent = 数据消费端 + 标准引用引擎 + 多格式输出</p>
+
+<div class="section">
+  <h3>报告类型全景</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">报告类型</th><th style="padding:10px;">触发方式</th><th style="padding:10px;">核心内容</th><th style="padding:10px;">引用标准</th><th style="padding:10px;">消费的Agent数据</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">🔄 运行日报</td><td style="padding:10px;">每日定时 + 按需</td><td style="padding:10px;">设备运行时长、启停次数、能耗、异常事件、关键KPI趋势</td><td style="padding:10px;">GB/T 17981</td>
+      <td style="padding:10px; font-size:11px;">监测Agent(异常事件)<br>策略Agent(执行记录)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">⚡ 能效周报/月报</td><td style="padding:10px;">每周/月定时</td><td style="padding:10px;">系统COP/EER、各设备能效对比、节能措施效果、对标分析</td><td style="padding:10px;">GB 19577、GB 50189</td>
+      <td style="padding:10px; font-size:11px;">效率Advocate(能效分析)<br>参数Agent(设定值历史)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">🌿 碳排放月报</td><td style="padding:10px;">每月定时 + 合规节点</td><td style="padding:10px;">碳排放总量、强度、配额使用进度、减排措施效果、合规状态</td><td style="padding:10px;">ISO 14064、GB/T 32150</td>
+      <td style="padding:10px; font-size:11px;">合规Advocate(碳核算)<br>效率Advocate(能耗数据)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">🔧 设备健康报告</td><td style="padding:10px;">每周 + 异常触发</td><td style="padding:10px;">性能衰减趋势、维护建议、备件预警、故障风险排序</td><td style="padding:10px;">GB/T 15316</td>
+      <td style="padding:10px; font-size:11px;">监测Agent(健康评估)<br>可靠性Advocate(风险排序)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">📋 策略审计报告</td><td style="padding:10px;">每策略 + 汇总</td><td style="padding:10px;">策略内容、审批链、预期vs实际效果、RL置信度变化</td><td style="padding:10px;">—</td>
+      <td style="padding:10px; font-size:11px;">策略Agent(策略内容)<br>协调Agent(仲裁记录)<br>RL引擎(置信度)</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>报告生成管线</h3>
+  <div class="mockup">
+    <div class="mockup-header">5阶段生成流程</div>
+    <div class="mockup-body" style="padding:16px; font-family:monospace; font-size:12px; line-height:2.0;">
+
+    <div style="display:flex; gap:8px;">
+      <div style="flex:1; background:#0f3460; padding:10px; border-radius:6px; text-align:center;">
+        <strong>Phase 1</strong><br>
+        <span style="font-size:11px;">数据聚合</span><br>
+        <span style="color:#888; font-size:10px;">时序DB + 事件Log<br>+ 策略Log + Memory</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#0f3460; padding:10px; border-radius:6px; text-align:center;">
+        <strong>Phase 2</strong><br>
+        <span style="font-size:11px;">KPI计算</span><br>
+        <span style="color:#888; font-size:10px;">按标准公式计算<br>COP/EER/碳排放强度</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#16213e; padding:10px; border-radius:6px; text-align:center;">
+        <strong>Phase 3</strong><br>
+        <span style="font-size:11px;">AI分析</span><br>
+        <span style="color:#888; font-size:10px;">LLM趋势分析<br>异常模式识别<br>对标评估</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#16213e; padding:10px; border-radius:6px; text-align:center;">
+        <strong>Phase 4</strong><br>
+        <span style="font-size:11px;">模板填充</span><br>
+        <span style="color:#888; font-size:10px;">结构化数据填入<br>LLM生成叙述<br>标准条款引用</span>
+      </div>
+      <div style="color:#666; align-self:center;">→</div>
+      <div style="flex:1; background:#1a2e1a; padding:10px; border-radius:6px; text-align:center;">
+        <strong>Phase 5</strong><br>
+        <span style="font-size:11px;">多格式输出</span><br>
+        <span style="color:#888; font-size:10px;">Dashboard JSON<br>PDF · Excel · MD</span>
+      </div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>标准如何在报告中引用</h3>
+  <div style="background:#1a1a2e; padding:14px; border-radius:8px; line-height:1.8;">
+    <p style="color:#e0e0e0; font-size:13px;">
+      报告Agent在Phase 2和Phase 4两次查询RAG标准库：
+    </p>
+    <table style="width:100%; border-collapse:collapse; margin-top:10px; font-size:12px;">
+      <tr style="background:#16213e;">
+        <td style="padding:8px; width:80px; color:#e9c46a;">Phase 2</td>
+        <td style="padding:8px; color:#a0a0b0;">查询：<em>"GB 19577中冷水机组COP的限定值和节能评价值分别是多少？"</em></td>
+        <td style="padding:8px; color:#888;">→ 得到具体数值，用于对标计算</td>
+      </tr>
+      <tr style="background:#16213e;">
+        <td style="padding:8px; color:#e9c46a;">Phase 4</td>
+        <td style="padding:8px; color:#a0a0b0;">查询：<em>"ISO 14064关于Scope 2排放的报告格式要求是什么？"</em></td>
+        <td style="padding:8px; color:#888;">→ 引用标准条款编号和原文，嵌入报告</td>
+      </tr>
+    </table>
+
+    <div style="background:#0f3460; padding:10px; border-radius:6px; margin-top:12px;">
+      <strong style="color:#4caf50; font-size:12px;">报告中的标准引用效果示例：</strong>
+      <div style="color:#e0e0e0; font-size:11px; margin-top:6px; padding:8px; background:#111; border-radius:4px;">
+        <p><strong>3. 能效对标分析</strong></p>
+        <p>本期系统COP为<strong>5.2</strong>，高于GB 19577-2024规定的冷水机组能效限定值( COP≥4.0 )，但低于节能评价值( COP≥5.6 )。与上一统计周期(COP 4.9)相比提升6.1%，主要得益于15:00减机策略实施后单机负荷率从58%提升至75%。<br>
+        <em style="color:#888;">[引用: GB 19577-2024 §4.2 表1; GB/T 17981-2020 §5.3]</em></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>报告Agent的内部结构</h3>
+  <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">组件</th><th style="padding:10px;">职责</th><th style="padding:10px;">技术</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">模板库</td><td style="padding:10px;">每种报告的结构化模板（章节、指标定义、图表占位符）</td><td style="padding:10px;">Jinja2 / Markdown模板</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">KPI计算器</td><td style="padding:10px;">按标准公式计算关键指标（COP、EER、碳排放强度等）</td><td style="padding:10px;">Python函数库，单元测试覆盖</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">数据分析引擎</td><td style="padding:10px;">趋势识别、异常检测、同比环比、对标分析</td><td style="padding:10px;">Quick LLM + 统计方法</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">标准引用器</td><td style="padding:10px;">查询RAG标准库，获取条款编号和原文</td><td style="padding:10px;">向量检索 + LLM精排</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">叙述生成器</td><td style="padding:10px;">将数据和分析转化为自然语言段落</td><td style="padding:10px;">Quick LLM + 结构化Prompt</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">格式渲染器</td><td style="padding:10px;">Markdown → PDF/Excel/JSON</td><td style="padding:10px;">WeasyPrint / Pandoc / openpyxl</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">调度器接口</td><td style="padding:10px;">注册定时任务，响应按需查询</td><td style="padding:10px;">与L4调度引擎对接</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>报告Agent与决策Agent的关系</h3>
+  <div style="background:#1a2e1a; padding:14px; border-radius:8px;">
+    <p style="color:#4caf50; font-size:14px;"><strong>报告Agent是只读消费者，不参与决策闭环</strong></p>
+    <div style="margin-top:10px; font-family:monospace; font-size:12px; line-height:2.0; color:#e0e0e0;">
+
+    <span style="color:#666;">决策闭环 (写入):</span><br>
+    监测 → 预测 → 策略 → Advocate辩论 → 协调 → 安全 → 参数 → 执行<br>
+    <span style="color:#888; font-size:11px;">(Report Agent 不在此链路上)</span><br><br>
+
+    <span style="color:#666;">报告闭环 (只读):</span><br>
+    所有Agent输出 → 📊报告Agent → 报告输出<br>
+    <span style="color:#888; font-size:11px;">(Report Agent 消费所有Agent的结构化输出，但不回写)</span>
+    </div>
+  </div>
+</div>

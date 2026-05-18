@@ -1,0 +1,105 @@
+<h2>强化学习驱动的策略审核进化系统</h2>
+<p class="subtitle">从"人工全审"到"RL辅助审核"再到"RL自动审核"，逐步减轻人工负担</p>
+
+<div class="mockup">
+  <div class="mockup-header">RL 审核进化三阶段</div>
+  <div class="mockup-body" style="padding:20px;">
+
+    <div style="display:flex; gap:12px; margin-bottom:20px;">
+      <div style="flex:1; background:#0f3460; padding:16px; border-radius:8px; text-align:center; border:2px solid #e94560;">
+        <h3 style="color:#e94560; margin:0 0 8px;">Phase 1</h3>
+        <div style="color:#e0e0e0; font-size:14px;">人工全审</div>
+        <div style="color:#a0a0b0; font-size:12px; margin-top:4px;">每一条策略人工审核<br/>RL收集数据学习偏好</div>
+        <div style="color:#666; font-size:11px; margin-top:8px;">约1-2个月数据积累</div>
+      </div>
+
+      <div style="color:#666; font-size:24px; align-self:center;">→</div>
+
+      <div style="flex:1; background:#16213e; padding:16px; border-radius:8px; text-align:center; border:2px solid #e9c46a;">
+        <h3 style="color:#e9c46a; margin:0 0 8px;">Phase 2</h3>
+        <div style="color:#e0e0e0; font-size:14px;">RL辅助审核</div>
+        <div style="color:#a0a0b0; font-size:12px; margin-top:4px;">高置信度策略自动过<br/>低置信度推人工确认</div>
+        <div style="color:#666; font-size:11px; margin-top:8px;">持续学习优化中</div>
+      </div>
+
+      <div style="color:#666; font-size:24px; align-self:center;">→</div>
+
+      <div style="flex:1; background:#1a2e1a; padding:16px; border-radius:8px; text-align:center; border:2px solid #4caf50;">
+        <h3 style="color:#4caf50; margin:0 0 8px;">Phase 3</h3>
+        <div style="color:#e0e0e0; font-size:14px;">RL自动审核</div>
+        <div style="color:#a0a0b0; font-size:12px; margin-top:4px;">常规策略自动执行<br/>异常/高风险推人工</div>
+        <div style="color:#666; font-size:11px; margin-top:8px;">人工只看边缘case</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>RL 审核引擎 — 核心设计</h3>
+  <table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px; text-align:left;">设计要素</th>
+      <th style="padding:10px; text-align:left;">方案</th>
+      <th style="padding:10px; text-align:left;">说明</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">RL算法</td>
+      <td style="padding:10px;">Contextual Bandit / Offline RL</td>
+      <td style="padding:10px;">安全性优先；不随机探索，从历史审核数据中学习</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">状态空间</td>
+      <td style="padding:10px;">冷负荷、室外温湿度、电价时段、设备运行状态、策略类型</td>
+      <td style="padding:10px;">描述"当前工况"的完整特征向量</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">动作空间</td>
+      <td style="padding:10px;">{自动批准, 推送人工审核, 建议修改}</td>
+      <td style="padding:10px;">离散决策，不是连续控制</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">奖励信号</td>
+      <td style="padding:10px;">节能效果 + 舒适度维持 + 设备健康 + 人工审批匹配度</td>
+      <td style="padding:10px;">多目标加权，从执行后反馈中学习</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">安全护栏</td>
+      <td style="padding:10px;">硬约束规则引擎始终在线</td>
+      <td style="padding:10px;">RL不能让"关掉所有机组"这种策略通过，规则引擎是第一道关</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>学习闭环</h3>
+  <div style="background:#1a1a2e; padding:16px; border-radius:8px; font-family:monospace; font-size:13px; line-height:2.0; color:#e0e0e0;">
+
+  <span style="color:#4caf50;">1. LLM生成策略</span>
+      → <span style="color:#e9c46a;">2. RL审核引擎评估 (当前工况下该策略置信度?)</span>
+        → <span style="color:#e94560;">置信度>阈值 → 自动批准执行</span>
+        → <span style="color:#e94560;">置信度<阈值 → 推送人工</span>
+
+  <span style="color:#4caf50;">3. 执行结果反馈</span>
+      → 能耗降低了多少? 舒适度是否保持?
+      → <span style="color:#e9c46a;">4. 奖励信号回传RL模型</span>
+        → 更新模型参数
+        → <span style="color:#4caf50;">5. 下次相似工况，RL审核更准</span>
+
+  <span style="color:#e9c46a;">6. 人工审核决策也作为训练信号</span>
+      → 操作员通过/驳回 → 反馈RL模型
+      → 减少未来同类策略的审核负担
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;">
+  <h3>安全设计：RL的边界</h3>
+  <div style="background:#2a1a1a; padding:16px; border-radius:8px; border-left:4px solid #e94560;">
+    <p><strong style="color:#e94560;">硬护栏（不可逾越）</strong></p>
+    <ul style="color:#e0e0e0; font-size:14px;">
+      <li>规则引擎始终在RL之前执行 — 违反安全约束的策略直接拒绝，不进入RL审核环节</li>
+      <li>RL永远不能修改策略内容本身，只能决定"通过/推送人工/建议修改"</li>
+      <li>极端工况（超高温、设备故障、安全事件）强制推送人工，RL置信度再高也无效</li>
+      <li>每个自动执行的策略都有"紧急停止"按钮，操作员可随时介入</li>
+    </ul>
+  </div>
+</div>

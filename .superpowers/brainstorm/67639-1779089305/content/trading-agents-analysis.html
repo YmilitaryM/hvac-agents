@@ -1,0 +1,193 @@
+<h2>TradingAgents 架构学习 & 对我们的启发</h2>
+<p class="subtitle">分析了 TradingAgents 的完整架构，提取可借鉴的设计模式</p>
+
+<div class="section">
+  <h3>TradingAgents 架构全景</h3>
+  <div class="mockup">
+    <div class="mockup-header">Agent分类 + 两轮辩论 + 延迟反思</div>
+    <div class="mockup-body" style="padding:18px; font-family:monospace; font-size:13px; line-height:2.0;">
+
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <div style="flex:1; background:#0f3460; padding:8px; border-radius:4px; text-align:center; font-size:11px;">
+          <strong>Layer 1: 分析层</strong><br>
+          <span style="color:#a0a0b0;">4 Analysts 并行采集信息</span><br>
+          <span style="color:#666;">Market · Social · News · Fundamentals</span><br>
+          <span style="color:#e9c46a; font-size:10px;">Quick LLM + 各自工具集</span>
+        </div>
+        <div style="color:#666; align-self:center;">→</div>
+        <div style="flex:1; background:#16213e; padding:8px; border-radius:4px; text-align:center; font-size:11px;">
+          <strong>Layer 2: 辩论层</strong><br>
+          <span style="color:#a0a0b0;">Bull ↔ Bear 对抗辩论</span><br>
+          <span style="color:#666;">多轮反驳，论点逐轮交锋</span><br>
+          <span style="color:#e9c46a; font-size:10px;">Quick LLM · 最大3轮</span>
+        </div>
+        <div style="color:#666; align-self:center;">→</div>
+        <div style="flex:1; background:#1a2e1a; padding:8px; border-radius:4px; text-align:center; font-size:11px;">
+          <strong>Layer 3: 决策层</strong><br>
+          <span style="color:#a0a0b0;">Research Manager 仲裁</span><br>
+          <span style="color:#666;">审理辩论内容 → 出结论</span><br>
+          <span style="color:#e94560; font-size:10px;">Deep LLM · 结构化输出</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <div style="flex:1; background:#16213e; padding:8px; border-radius:4px; text-align:center; font-size:11px;">
+          <strong>Layer 4: 执行层</strong><br>
+          <span style="color:#a0a0b0;">Trader 转化为交易计划</span><br>
+          <span style="color:#e9c46a; font-size:10px;">Quick LLM · 结构化输出</span>
+        </div>
+        <div style="color:#666; align-self:center;">→</div>
+        <div style="flex:1; background:#16213e; padding:8px; border-radius:4px; text-align:center; font-size:11px;">
+          <strong>Layer 5: 风险辩论</strong><br>
+          <span style="color:#a0a0b0;">Aggressive ↔ Conservative ↔ Neutral</span><br>
+          <span style="color:#e9c46a; font-size:10px;">Quick LLM · 3人轮转辩论</span>
+        </div>
+        <div style="color:#666; align-self:center;">→</div>
+        <div style="flex:1; background:#1a2e1a; padding:8px; border-radius:4px; text-align:center; font-size:11px;">
+          <strong>Layer 6: 最终决策</strong><br>
+          <span style="color:#a0a0b0;">Portfolio Manager 终审</span><br>
+          <span style="color:#e94560; font-size:10px;">Deep LLM · 结构化输出</span>
+        </div>
+      </div>
+
+      <div style="background:#2a1a2e; padding:8px; border-radius:4px; text-align:center; font-size:11px;">
+        <strong>Layer 7: 延迟反思</strong><br>
+        <span style="color:#a0a0b0;">决策存Log → N天后回看结果 → LLM反思 → 写入Memory → 注入未来Prompt</span><br>
+        <span style="color:#e9c46a; font-size:10px;">这是 TradingAgents 最精妙的设计之一</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:28px;">
+  <h3>可借鉴的核心设计模式</h3>
+
+  <table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">#</th>
+      <th style="padding:10px;">设计模式</th>
+      <th style="padding:10px;">TradingAgents 怎么做的</th>
+      <th style="padding:10px;">我们怎么用</th>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px; color:#4caf50;">1</td>
+      <td style="padding:10px;"><strong>Deep/Quick LLM 分层</strong></td>
+      <td style="padding:10px;">分析师用Quick LLM省成本，Manager用Deep LLM保证判决质量</td>
+      <td style="padding:10px;">监测/预测/参数Agent用Quick LLM，策略仲裁/安全审查用Deep LLM。专家Agent可配置中等模型</td>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px; color:#4caf50;">2</td>
+      <td style="padding:10px;"><strong>两轮辩论机制</strong></td>
+      <td style="padding:10px;">Round1: Bull↔Bear 对抗辩论 → Manager仲裁。Round2: 3 Risk视角辩论 → PM终审</td>
+      <td style="padding:10px;">Round1: 策略Agent提案 → 4专家并行审查 → 协调Agent汇总。Round2: RL审核+人工。两轮视角不同</td>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px; color:#e9c46a;">3</td>
+      <td style="padding:10px;"><strong>延迟反思 → 记忆注入</strong></td>
+      <td style="padding:10px;">决策存Log，N天后回看实际收益，LLM写反思，下次同股票分析时注入历史教训</td>
+      <td style="padding:10px;">这就是我们RL审核引擎的训练数据来源！策略执行后 → 效果反馈 → RL学习+LLM反思 → 注入未来策略生成</td>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px; color:#4caf50;">4</td>
+      <td style="padding:10px;"><strong>结构化输出 (Pydantic Schema)</strong></td>
+      <td style="padding:10px;">ResearchPlan、TraderProposal、PortfolioDecision 都用Pydantic模型约束输出格式</td>
+      <td style="padding:10px;">每个Agent输出都是Pydantic Schema：策略方案、专家审查意见、安全校验结果、报告内容。保证下游可解析</td>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px; color:#4caf50;">5</td>
+      <td style="padding:10px;"><strong>工具按角色分离</strong></td>
+      <td style="padding:10px;">Market Analyst有stock_data+indicators，Fundamentals有balance_sheet+cashflow，各用各的工具</td>
+      <td style="padding:10px;">监测Agent: 传感器数据工具。预测Agent: 天气+ML模型工具。专家: RAG标准查询工具。各司其职</td>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px; color:#4caf50;">6</td>
+      <td style="padding:10px;"><strong>消息清理节点</strong></td>
+      <td style="padding:10px;">每个Analyst分析完后清空消息历史，只保留结构化Report传给下游，避免上下文膨胀</td>
+      <td style="padding:10px;">Agent之间不传原始消息，只传结构化结果。大幅减少LLM调用时的上下文长度和成本</td>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px; color:#e9c46a;">7</td>
+      <td style="padding:10px;"><strong>辩论轮次硬限制</strong></td>
+      <td style="padding:10px;">max_debate_rounds参数控制最大轮数，防止无限辩论</td>
+      <td style="padding:10px;">专家审查最多N轮，超时则协调Agent强制汇总。时延可控</td>
+    </tr>
+
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px; color:#4caf50;">8</td>
+      <td style="padding:10px;"><strong>Checkpoint/Resume</strong></td>
+      <td style="padding:10px;">LangGraph SqliteSaver，崩溃后可从上次成功节点恢复</td>
+      <td style="padding:10px;">HVAC系统长期运行，断点续跑必不可少。特别是策略生成+辩论流程</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:28px;">
+  <h3>我们需要不同的地方</h3>
+  <table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">差异点</th>
+      <th style="padding:10px;">TradingAgents</th>
+      <th style="padding:10px;">我们的HVAC系统</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">决策节奏</td><td style="padding:10px;">批处理（每日一次）</td><td style="padding:10px;">持续流式 + 定时调度混合</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">安全约束</td><td style="padding:10px;">风险偏好（软约束）</td><td style="padding:10px;">物理安全（硬约束，不可逾越）</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">人工介入</td><td style="padding:10px;">无，全自动</td><td style="padding:10px;">核心设计要素，人在回路中</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">学习机制</td><td style="padding:10px;">LLM反思（同模型自我反思）</td><td style="padding:10px;">RL数值模型 + LLM反思 (双通道)</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">辩论参与者</td><td style="padding:10px;">2人对抗 + 3人风险</td><td style="padding:10px;">1提案 + 4专家并行 + 仲裁</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">数据来源</td><td style="padding:10px;">外部API (Yahoo Finance, Alpha Vantage)</td><td style="padding:10px;">仿真 + 传感器 + 天气 + RAG标准库</td>
+    </tr>
+  </table>
+</div>
+
+<div class="section" style="margin-top:28px;">
+  <h3>借鉴后的最终工作流</h3>
+  <div style="background:#1a1a2e; padding:16px; border-radius:8px; font-family:monospace; font-size:12px; line-height:2.0; color:#e0e0e0;">
+
+  <span style="color:#666;">[定时触发 或 负荷变化超过阈值]</span><br>
+
+  <span style="color:#2196f3;">Phase 1: 分析层 (并行)</span><br>
+  &nbsp;&nbsp;🔍监测Agent → 设备状态快照<br>
+  &nbsp;&nbsp;📈预测Agent → 多尺度负荷预测<br>
+  &nbsp;&nbsp;<span style="color:#666;">// 输出结构化数据，不传原始消息</span><br>
+
+  <span style="color:#e9c46a;">Phase 2: 策略提案</span><br>
+  &nbsp;&nbsp;🎯策略Agent ← 消费Phase 1输出 → 生成策略方案<br>
+
+  <span style="color:#4caf50;">Phase 3: 专家审查 (并行)</span><br>
+  &nbsp;&nbsp;🌡️暖通 ⚡机电 💰能源 🌿碳排放 → 各自审查意见<br>
+  &nbsp;&nbsp;<span style="color:#666;">// Deep=暖通/机电, Quick=能源/碳排放</span><br>
+
+  <span style="color:#9c27b0;">Phase 4: 仲裁</span><br>
+  &nbsp;&nbsp;👑协调Agent ← 汇总4专家意见 → 加权决策<br>
+
+  <span style="color:#e94560;">Phase 5: 安全校验</span><br>
+  &nbsp;&nbsp;🛡️安全Agent → 硬约束检查 → 通过/拦截<br>
+
+  <span style="color:#ff9800;">Phase 6: 审核与执行</span><br>
+  &nbsp;&nbsp;🌿RL审核引擎 → 高置信度自动批 / 低置信度推人工<br>
+  &nbsp;&nbsp;⚙️参数Agent → 精细化设备参数<br>
+  &nbsp;&nbsp;⏰调度引擎 → 注册定时任务 / 即时下发<br>
+
+  <span style="color:#666;">Phase 7: 反馈闭环</span><br>
+  &nbsp;&nbsp;执行结果 → RL奖励信号 + LLM反思 → 注入Memory
+  </div>
+</div>

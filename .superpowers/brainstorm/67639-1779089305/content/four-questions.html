@@ -1,0 +1,128 @@
+<h2>四大关键问题的设计方案</h2>
+<p class="subtitle">时延处理 · 冷负荷预测 · Agent分工与辩论 · 编排管理</p>
+
+<div class="section">
+  <h3>Q1: 时延问题 — 分层异步 + 消息总线</h3>
+  <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">层级</th>
+      <th style="padding:10px;">典型时延</th>
+      <th style="padding:10px;">处理方式</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;"><td style="padding:10px;">实时控制层</td><td style="padding:10px;">&lt; 100ms</td><td style="padding:10px;">同步执行，不等待上层</td></tr>
+    <tr style="border-bottom:1px solid #333;"><td style="padding:10px;">策略执行层</td><td style="padding:10px;">秒级</td><td style="padding:10px;">定时任务触发，前置条件实时检查</td></tr>
+    <tr style="border-bottom:1px solid #333;"><td style="padding:10px;">RL审核引擎</td><td style="padding:10px;">&lt; 100ms</td><td style="padding:10px;">本地模型推理，无需网络调用</td></tr>
+    <tr style="border-bottom:1px solid #333;"><td style="padding:10px;">LLM策略生成</td><td style="padding:10px;">1~30秒</td><td style="padding:10px;">提前生成，异步执行，不阻塞实时控制</td></tr>
+    <tr style="border-bottom:1px solid #333;"><td style="padding:10px;">人工审核</td><td style="padding:10px;">分钟~小时</td><td style="padding:10px;">非阻塞，策略提前生成，审核不影响实时运行</td></tr>
+    <tr style="border-bottom:1px solid #333;"><td style="padding:10px;">RL模型训练</td><td style="padding:10px;">小时~天</td><td style="padding:10px;">离线训练，定期更新模型权重</td></tr>
+  </table>
+  <div style="background:#1a1a2e; padding:16px; border-radius:8px; font-size:13px;">
+    <strong style="color:#4caf50;">核心设计原则：</strong>
+    <ul style="color:#e0e0e0; margin-top:8px;">
+      <li><strong>消息总线解耦</strong> — 各层通过 Redis/MQTT 异步通信，互不阻塞</li>
+      <li><strong>实时层完全自治</strong> — PID、安全保护不依赖上层，自己闭环</li>
+      <li><strong>策略预生成</strong> — LLM提前N小时生成策略（利用负荷预测），不是临到时间才生成</li>
+      <li><strong>RL本地推理</strong> — 模型部署在本地，推理无网络延迟</li>
+      <li><strong>超时降级</strong> — LLM调用超时？用上次的策略模板 + 当前数据填充</li>
+    </ul>
+  </div>
+</div>
+
+<div class="section" style="margin-top:32px;">
+  <h3>Q2: 冷负荷预测 — 混合模型 + 多时间尺度</h3>
+  <table style="width:100%; border-collapse:collapse; margin-bottom:16px;">
+    <tr style="background:#1a1a2e; color:#eee;">
+      <th style="padding:10px;">时间尺度</th>
+      <th style="padding:10px;">方法</th>
+      <th style="padding:10px;">用途</th>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">超短期 (5~15min)</td>
+      <td style="padding:10px;">时序模型 (LightGBM/XGBoost)</td>
+      <td style="padding:10px;">实时控制参数微调</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">短期 (1~6小时)</td>
+      <td style="padding:10px;">深度学习 (TFT/LSTM + 注意力)</td>
+      <td style="padding:10px;">策略生成、加减机决策</td>
+    </tr>
+    <tr style="border-bottom:1px solid #333;">
+      <td style="padding:10px;">中长期 (24h~72h)</td>
+      <td style="padding:10px;">物理模型 + 天气预报 + 日历特征</td>
+      <td style="padding:10px;">日前调度计划、蓄冷策略</td>
+    </tr>
+  </table>
+  <div style="background:#1a1a2e; padding:16px; border-radius:8px; font-size:13px;">
+    <strong style="color:#4caf50;">特征输入：</strong>
+    <span style="color:#e0e0e0; display:block; margin-top:8px;">
+    室外干球温度 · 相对湿度 · 太阳辐照度 · 时间特征(小时/星期/月份) · 建筑 occupancy 模式 · 历史负荷序列 · 电价时段
+    </span>
+    <strong style="color:#4caf50; display:block; margin-top:12px;">仿真阶段：</strong>
+    <span style="color:#e0e0e0;">
+    用建筑热工模型 (RC网络 或 EnergyPlus 简化模型) 生成合成负荷数据 → 训练ML模型 → 后期接入真实BA数据后 finetune
+    </span>
+  </div>
+</div>
+
+<div class="section" style="margin-top:32px;">
+  <h3>Q3: Agent 分工与辩论机制</h3>
+  <div class="mockup">
+    <div class="mockup-header">6个Agent + 辩论仲裁机制</div>
+    <div class="mockup-body" style="padding:20px;">
+      <table style="width:100%; border-collapse:collapse;">
+        <tr style="background:#1a1a2e; color:#eee;">
+          <th style="padding:8px;">Agent</th><th style="padding:8px;">职责</th><th style="padding:8px;">输入</th><th style="padding:8px;">输出</th>
+        </tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:8px; color:#e94560;">🔍 监测Agent</td><td style="padding:8px;">设备实时状态、异常检测、健康评估</td><td style="padding:8px;">传感器数据流</td><td style="padding:8px;">异常告警、设备健康分</td></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:8px; color:#4caf50;">📈 预测Agent</td><td style="padding:8px;">多时间尺度冷负荷预测</td><td style="padding:8px;">天气+历史+日历</td><td style="padding:8px;">负荷预测值+置信区间</td></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:8px; color:#e9c46a;">🎯 策略Agent</td><td style="padding:8px;">生成运行策略(加减机、模式切换)</td><td style="padding:8px;">预测+设备状态+电价</td><td style="padding:8px;">策略方案+预期效果</td></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:8px; color:#2196f3;">⚙️ 参数Agent</td><td style="padding:8px;">设备运行参数优化(水温设定、频率)</td><td style="padding:8px;">策略+实时负荷+设备模型</td><td style="padding:8px;">最优参数组合</td></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:8px; color:#ff9800;">🛡️ 安全Agent</td><td style="padding:8px;">硬约束校验、安全边界守护</td><td style="padding:8px;">任何Agent的输出</td><td style="padding:8px;">通过/拦截+原因</td></tr>
+        <tr style="border-bottom:1px solid #333;"><td style="padding:8px; color:#9c27b0;">👑 协调Agent</td><td style="padding:8px;">编排流程、仲裁冲突、汇总结果</td><td style="padding:8px;">所有Agent输出</td><td style="padding:8px;">最终决策+置信度</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div style="background:#1a1a2e; padding:16px; border-radius:8px; margin-top:16px; font-size:13px;">
+    <strong style="color:#e9c46a;">辩论机制的三种模式：</strong>
+    <div style="margin-top:12px; display:flex; gap:12px;">
+      <div style="flex:1; background:#0f3460; padding:12px; border-radius:6px;">
+        <strong style="color:#4caf50;">模式A: 并行提案+投票</strong>
+        <p style="color:#a0a0b0; font-size:12px;">策略Agent和参数Agent各提案，协调Agent加权投票，适用于常规工况</p>
+      </div>
+      <div style="flex:1; background:#16213e; padding:12px; border-radius:6px;">
+        <strong style="color:#e9c46a;">模式B: 对抗辩论</strong>
+        <p style="color:#a0a0b0; font-size:12px;">一个Agent提案，另一个扮演"反方"质疑，适用于复杂/边界工况</p>
+      </div>
+      <div style="flex:1; background:#1a2e1a; padding:12px; border-radius:6px;">
+        <strong style="color:#2196f3;">模式C: 串行接力</strong>
+        <p style="color:#a0a0b0; font-size:12px;">预测→策略→参数→安全，链式传递，适用于负荷变化平缓的时段</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:32px;">
+  <h3>Q4: Agent 编排管理 — LangGraph StateGraph + 黑板模式</h3>
+  <div style="background:#1a1a2e; padding:16px; border-radius:8px; font-size:13px; line-height:1.8;">
+    <strong style="color:#4caf50;">编排机制：</strong>
+    <ul style="color:#e0e0e0; margin-top:8px;">
+      <li><strong>LangGraph StateGraph</strong> — 定义Agent之间的调用拓扑和条件分支</li>
+      <li><strong>共享黑板 (Shared State)</strong> — 所有Agent读写同一个结构化状态对象，避免点对点通信爆炸</li>
+      <li><strong>协调Agent = Supervisor</strong> — 决定"下一步调用哪个Agent"，类似 LangGraph 的 Supervisor 模式</li>
+      <li><strong>安全Agent = 全局拦截器</strong> — 任何Agent的输出先经过安全Agent再进入下一环节</li>
+    </ul>
+    <strong style="color:#4caf50; display:block; margin-top:12px;">Agent间通信方式：</strong>
+    <ul style="color:#e0e0e0; margin-top:8px;">
+      <li><strong>不直接对话</strong> — Agent之间不互相调用，只通过共享状态传递信息</li>
+      <li><strong>事件总线</strong> — 异常事件（如设备故障）通过 Pub/Sub 广播，订阅者自主响应</li>
+      <li><strong>结构化输出</strong> — 每个Agent的输出是预定义的 Schema（Pydantic模型），保证下游可解析</li>
+    </ul>
+    <strong style="color:#4caf50; display:block; margin-top:12px;">运行时管理：</strong>
+    <ul style="color:#e0e0e0; margin-top:8px;">
+      <li>每个Agent独立进程/协程，可独立扩缩、重启、升级</li>
+      <li>心跳检测 + 超时降级</li>
+      <li>全链路追踪（每次决策的完整Agent调用链可回溯）</li>
+    </ul>
+  </div>
+</div>
