@@ -85,6 +85,36 @@ class TestStrategy:
         s.status = StrategyStatus.REJECTED
         assert s.is_terminal
 
+    def test_approve_from_under_review(self):
+        s = Strategy(
+            strategy_id="test_003",
+            trigger_type=TriggerType.SCHEDULED,
+            actions=[],
+        )
+        s.status = StrategyStatus.UNDER_REVIEW
+        s.approve()
+        assert s.status == StrategyStatus.APPROVED
+        assert s.is_approved
+
+    def test_approve_from_draft_raises(self):
+        s = Strategy(
+            strategy_id="test_004",
+            trigger_type=TriggerType.SCHEDULED,
+            actions=[],
+        )
+        with pytest.raises(ValueError, match="Cannot approve"):
+            s.approve()
+
+    def test_reject_appends_reason(self):
+        s = Strategy(
+            strategy_id="test_005",
+            trigger_type=TriggerType.SCHEDULED,
+            actions=[],
+        )
+        s.reject("cooling capacity insufficient")
+        assert s.status == StrategyStatus.REJECTED
+        assert "cooling capacity insufficient" in s.llm_reasoning
+
     def test_strategy_requires_transition_for_load_following(self):
         with pytest.raises(ValueError, match="transition_plan"):
             Strategy(

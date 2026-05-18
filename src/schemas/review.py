@@ -1,6 +1,6 @@
 from enum import Enum
-from typing import List, Optional, Set
-from pydantic import BaseModel, Field
+from typing import List, Set
+from pydantic import BaseModel, Field, computed_field
 
 
 class ReviewVerdict(str, Enum):
@@ -17,10 +17,12 @@ class AdvocateOpinion(BaseModel):
     suggestions: List[str] = Field(default_factory=list)
     confidence: float = 0.5
 
+    @computed_field
     @property
     def is_positive(self) -> bool:
         return self.verdict in (ReviewVerdict.APPROVE, ReviewVerdict.CONDITIONAL_APPROVAL)
 
+    @computed_field
     @property
     def is_rejection(self) -> bool:
         return self.verdict == ReviewVerdict.REJECT
@@ -38,22 +40,24 @@ class ArbitrationResult(BaseModel):
     @classmethod
     def from_opinions(cls, opinions: List[AdvocateOpinion]) -> "ArbitrationResult":
         rejections = [o for o in opinions if o.is_rejection]
-        conditions = [o for o in opinions if o.verdict == ReviewVerdict.CONDITIONAL_APPROVAL]
+        cond_advocates = [o for o in opinions if o.verdict == ReviewVerdict.CONDITIONAL_APPROVAL]
 
         if rejections:
+            rejecting_parties = {o.advocate for o in rejections}
+            all_different = len(rejecting_parties) < len(opinions)
             return cls(
                 decision="rejected" if len(rejections) >= 2 else "under_debate",
                 reasoning=f"{len(rejections)} advocate(s) rejected",
-                has_conflict=len(rejections) < 3 and len(rejections) > 0,
-                conflicting_parties={o.advocate for o in rejections},
+                has_conflict=all_different and len(rejections) < len(opinions),
+                conflicting_parties=rejecting_parties if all_different else set(),
                 debate_needed=len(rejections) == 1,
-                debate_topic="reliability vs efficiency" if len(rejections) == 1 else "",
+                debate_topic=" vs ".join(sorted(rejecting_parties)) + " conflict" if len(rejections) == 1 else "",
             )
 
-        all_conditions = [c for o in conditions for c in o.concerns]
+        all_conditions = [c for o in cond_advocates for c in o.concerns]
         return cls(
-            decision="approved" if not conditions else "approved_with_conditions",
-            reasoning="Unanimous approval" if not conditions else f"Approved with {len(conditions)} condition(s)",
+            decision="approved" if not cond_advocates else "approved_with_conditions",
+            reasoning="Unanimous approval" if not cond_advocates else f"Approved with {len(all_conditions)} condition(s)",
             conditions=all_conditions,
             has_conflict=False,
         )

@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 
 class TriggerType(str, Enum):
@@ -32,10 +32,12 @@ class StrategyAction(BaseModel):
     from_val: Optional[float] = None
     to_val: Optional[float] = None
 
+    @computed_field
     @property
     def is_discrete(self) -> bool:
         return self.action in ("start", "stop", "open_valve", "close_valve")
 
+    @computed_field
     @property
     def is_continuous(self) -> bool:
         return not self.is_discrete
@@ -101,10 +103,12 @@ class Strategy(BaseModel):
                 )
         return self
 
+    @computed_field
     @property
     def is_approved(self) -> bool:
         return self.status == StrategyStatus.APPROVED
 
+    @computed_field
     @property
     def is_terminal(self) -> bool:
         return self.status in (StrategyStatus.COMPLETED, StrategyStatus.REJECTED,
