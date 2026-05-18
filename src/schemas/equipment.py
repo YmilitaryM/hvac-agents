@@ -2,6 +2,8 @@ from enum import Enum
 from typing import Dict, List, Optional
 from pydantic import BaseModel, Field, computed_field
 
+_RATED_FREQUENCY_HZ = 50.0
+
 
 class EquipmentStatus(str, Enum):
     OFF = "off"
@@ -78,15 +80,14 @@ class PumpState(BaseModel):
     def power_kw(self) -> float:
         if self.speed_hz <= 0 or self.rated_power_kw <= 0:
             return 0.0
-        rated_hz = 50.0
-        return self.rated_power_kw * (self.speed_hz / rated_hz) ** 3
+        return self.rated_power_kw * (self.speed_hz / _RATED_FREQUENCY_HZ) ** 3
 
     @computed_field
     @property
     def flow_lps(self) -> float:
         if self.speed_hz <= 0:
             return 0.0
-        return self.rated_flow_lps * (self.speed_hz / 50.0)
+        return self.rated_flow_lps * (self.speed_hz / _RATED_FREQUENCY_HZ)
 
 
 class CoolingTowerState(BaseModel):
@@ -105,15 +106,10 @@ class CoolingTowerState(BaseModel):
 
     @computed_field
     @property
-    def approach_temp(self) -> float:
-        return self.water_out_temp
-
-    @computed_field
-    @property
     def fan_power_kw(self) -> float:
         if self.fan_speed_hz <= 0:
             return 0.0
-        return self.rated_fan_power_kw * (self.fan_speed_hz / 50.0) ** 3
+        return self.rated_fan_power_kw * (self.fan_speed_hz / _RATED_FREQUENCY_HZ) ** 3
 
 
 class PlantSnapshot(BaseModel):
@@ -150,6 +146,14 @@ class PlantSnapshot(BaseModel):
     @property
     def running_chillers(self) -> List[ChillerState]:
         return [c for c in self.chillers.values() if c.is_running]
+
+    @computed_field
+    @property
+    def tower_approach_temps(self) -> Dict[str, float]:
+        return {
+            tid: t.water_out_temp - self.outdoor_wb_temp
+            for tid, t in self.cooling_towers.items()
+        }
 
     @classmethod
     def from_dict(cls, data: dict) -> "PlantSnapshot":
