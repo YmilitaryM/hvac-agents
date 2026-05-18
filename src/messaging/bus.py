@@ -7,8 +7,11 @@ defaults to in-process message passing.
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
+import logging
 import time
 import json
+
+logger = logging.getLogger(__name__)
 
 
 class EventType(str, Enum):
@@ -75,6 +78,9 @@ class Event:
 # Callback type: function that receives an Event and returns nothing
 EventCallback = Callable[[Event], None]
 
+# Subscription token: (event_type, callback_id) for safe unsubscription
+SubscriptionToken = tuple
+
 
 class EventBus:
     """In-process event bus with publish/subscribe semantics.
@@ -84,8 +90,9 @@ class EventBus:
 
     Usage:
         bus = EventBus()
-        bus.subscribe(EventType.STRATEGY_APPROVED, my_handler)
+        token = bus.subscribe(EventType.STRATEGY_APPROVED, my_handler)
         bus.publish(Event(EventType.STRATEGY_APPROVED, "coordinator", {...}))
+        bus.unsubscribe(token)
     """
 
     def __init__(self):
@@ -94,21 +101,28 @@ class EventBus:
         self._event_log: List[Event] = []
         self._max_log_size: int = 1000
 
-    def subscribe(self, event_type: EventType, callback: EventCallback) -> None:
-        """Subscribe to a specific event type."""
+    def subscribe(self, event_type: EventType, callback: EventCallback) -> SubscriptionToken:
+        """Subscribe to a specific event type. Returns a token for unsubscribe()."""
         if event_type not in self._handlers:
             self._handlers[event_type] = []
         self._handlers[event_type].append(callback)
+        return (event_type, id(callback))
 
-    def subscribe_all(self, callback: EventCallback) -> None:
-        """Subscribe to all events."""
+    def subscribe_all(self, callback: EventCallback) -> SubscriptionToken:
+        """Subscribe to all events. Returns a token for unsubscribe()."""
         self._catch_all_handlers.append(callback)
+        return (None, id(callback))
 
-    def unsubscribe(self, event_type: EventType, callback: EventCallback) -> None:
-        """Unsubscribe from a specific event type."""
-        if event_type in self._handlers:
+    def unsubscribe(self, token: SubscriptionToken) -> None:
+        """Unsubscribe using a token returned by subscribe() or subscribe_all()."""
+        event_type, callback_id = token
+        if event_type is None:
+            self._catch_all_handlers = [
+                h for h in self._catch_all_handlers if id(h) != callback_id
+            ]
+        elif event_type in self._handlers:
             self._handlers[event_type] = [
-                h for h in self._handlers[event_type] if h is not callback
+                h for h in self._handlers[event_type] if id(h) != callback_id
             ]
 
     def publish(self, event: Event) -> None:
@@ -128,14 +142,24 @@ class EventBus:
             try:
                 handler(event)
             except Exception:
-                pass  # Don't let one failed handler break the bus
+                logger.warning(
+                    "Handler %s failed for event %s",
+                    getattr(handler, "__name__", handler),
+                    event.event_type.value,
+                    exc_info=True,
+                )
 
         # Call catch-all handlers
         for handler in self._catch_all_handlers:
             try:
                 handler(event)
             except Exception:
-                pass
+                logger.warning(
+                    "Catch-all handler %s failed for event %s",
+                    getattr(handler, "__name__", handler),
+                    event.event_type.value,
+                    exc_info=True,
+                )
 
     def get_event_log(self, n: int = 100) -> List[Event]:
         """Get the most recent events."""

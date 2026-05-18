@@ -74,10 +74,10 @@ class TestEventBus:
     def test_unsubscribe(self, bus):
         received = []
         def handler(e): received.append(e)
-        bus.subscribe(EventType.CUSTOM, handler)
+        token = bus.subscribe(EventType.CUSTOM, handler)
         bus.publish(Event(EventType.CUSTOM, "test"))
         assert len(received) == 1
-        bus.unsubscribe(EventType.CUSTOM, handler)
+        bus.unsubscribe(token)
         bus.publish(Event(EventType.CUSTOM, "test"))
         assert len(received) == 1  # unchanged
 

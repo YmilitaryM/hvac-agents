@@ -8,7 +8,6 @@ LLM integration can be layered on top later for strategy explanation and reasoni
 """
 
 import time as time_module
-from dataclasses import asdict
 from typing import Any, Dict, List, Optional
 
 from src.agents.base import BaseAgent, AgentContext
@@ -31,6 +30,10 @@ def build_strategy(
     strategy_id: Optional[str] = None,
     trigger_type: str = "SCHEDULED",
     previous_loads: Optional[Dict[str, float]] = None,
+    electricity_price: float = 0.8,
+    grid_carbon_intensity: float = 0.5,
+    carbon_price: float = 0.08,
+    outdoor_wb_temp: float = 26.0,
 ) -> Strategy:
     """Convert an optimization solution into a Strategy with transition plan.
 
@@ -48,8 +51,10 @@ def build_strategy(
         strategy_id: Optional explicit strategy ID (auto-generated if omitted).
         trigger_type: One of "SCHEDULED", "LOAD_CHANGE", "FAULT", etc.
         previous_loads: Optional dict mapping chiller name -> previous load in RT.
-                        When provided, start actions are only added for chillers
-                        that were previously off and now have load > 0.
+        electricity_price: Electricity price in currency/kWh.
+        grid_carbon_intensity: Grid carbon intensity in kgCO2/kWh.
+        carbon_price: Carbon price in currency/kgCO2.
+        outdoor_wb_temp: Outdoor wet-bulb temperature in degC.
 
     Returns:
         A Strategy ready for review and execution.
@@ -160,6 +165,9 @@ def build_strategy(
         trigger_time=current_time,
         current_load_rt=current_load_rt,
         predicted_load_rt=predicted_load_rt,
+        outdoor_wb_temp=outdoor_wb_temp,
+        electricity_price=electricity_price,
+        carbon_intensity=grid_carbon_intensity,
         actions=actions,
         transition_plan=transition_plan,
         preconditions=preconditions,
@@ -247,6 +255,10 @@ class StrategyAgent(BaseAgent):
             predicted_load_rt=predicted_load_rt,
             current_time=current_time,
             trigger_type=trigger_type,
+            electricity_price=price_per_kwh,
+            grid_carbon_intensity=grid_carbon_intensity,
+            carbon_price=carbon_price,
+            outdoor_wb_temp=float(input_data.get("outdoor_wb_temp", t_cw)),
         )
 
         # Serialize both for the caller

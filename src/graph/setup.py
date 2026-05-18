@@ -141,18 +141,33 @@ class HVACGraph:
         agent = self.agents["predict"]
         if agent is None:
             return {}
+        weather = state.get("weather_data", {}) or {}
+        snapshot = state.get("plant_snapshot", {}) or {}
+        current_time = state.get("current_time", 0) or 0
+        # Extract weather fields from weather_data dict or plant snapshot
+        outdoor_temp = float(weather.get("outdoor_temp", snapshot.get("outdoor_db_temp", 32.0)))
+        outdoor_humidity = float(weather.get("outdoor_humidity", snapshot.get("outdoor_humidity", 60.0)))
+        # Derive time-of-day and day-of-week from current_time
+        import datetime
+        dt = datetime.datetime.fromtimestamp(current_time)
+        hour_of_day = dt.hour
+        day_of_week = dt.weekday()
+        historical_load = (
+            state.get("current_strategy", {}).get("current_load_rt")
+            if state.get("current_strategy")
+            else None
+        )
         result = await agent.run(
             {
-                "weather_data": state.get("weather_data", {}),
-                "historical_load": (
-                    state.get("current_strategy", {}).get("current_load_rt")
-                    if state.get("current_strategy")
-                    else None
-                ),
-                "current_time": state.get("current_time", 0),
+                "outdoor_temp": outdoor_temp,
+                "outdoor_humidity": outdoor_humidity,
+                "hour_of_day": hour_of_day,
+                "day_of_week": day_of_week,
+                "historical_load": historical_load,
+                "current_time": current_time,
             }
         )
-        forecast = result.get("forecast", {})
+        forecast = result.get("load_forecast", {})
         return {
             "predicted_load_rt": forecast.get("load_15min"),
             "load_forecast_15min": forecast.get("load_15min"),
@@ -173,11 +188,14 @@ class HVACGraph:
                 else 500
             )
 
+        snapshot = state.get("plant_snapshot", {}) or {}
+        t_cw = float(snapshot.get("cw_supply_temp", snapshot.get("outdoor_wb_temp", 30.0)))
+        t_chw = float(snapshot.get("chw_supply_temp", 7.0))
         result = await agent.run(
             {
                 "total_load_rt": predicted,
-                "t_cw": 30.0,
-                "t_chw": 7.0,
+                "t_cw": t_cw,
+                "t_chw": t_chw,
                 "current_time": state.get("current_time", 0),
                 "predicted_load_rt": predicted,
                 "trigger_type": state.get("trigger_type", "SCHEDULED"),
@@ -236,10 +254,12 @@ class HVACGraph:
                 }
             }
         strategy = state.get("pending_strategy", {})
+        snapshot = state.get("plant_snapshot", {}) or {}
+        t_cw = float(snapshot.get("cw_supply_temp", snapshot.get("outdoor_wb_temp", 30.0)))
         result = await agent.run(
             {
                 "pending_strategy": strategy,
-                "t_cw": 30.0,
+                "t_cw": t_cw,
                 "current_time": state.get("current_time", 0),
             }
         )
@@ -251,7 +271,9 @@ class HVACGraph:
         history = list(state.get("strategy_history", []))
 
         if pending:
-            pending["status"] = "approved"
+            arb = state.get("arbitration_result", {}) or {}
+            decision = arb.get("decision", "approved")
+            pending["status"] = decision
             history.append(
                 {
                     "strategy_id": pending.get("strategy_id", ""),
