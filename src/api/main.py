@@ -3,9 +3,13 @@
 import logging
 import time
 import uuid
+from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .monitoring import router as monitoring_router
 from .strategy import router as strategy_router
@@ -17,11 +21,24 @@ logger = logging.getLogger(__name__)
 
 def create_app(debug: bool = False) -> FastAPI:
     """Create and configure the FastAPI application."""
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        from src.config import get_config
+        if get_config().storage.use_db:
+            from src.db.engine import init_db
+            await init_db()
+        yield
+        if get_config().storage.use_db:
+            from src.db.engine import close_db
+            await close_db()
+
     app = FastAPI(
         title="HVAC Chiller Plant Multi-Agent System",
         description="REST API for real-time monitoring, strategy management, and reporting",
         version="0.1.0",
         debug=debug,
+        lifespan=lifespan,
     )
 
     # CORS middleware for frontend access
@@ -58,20 +75,17 @@ def create_app(debug: bool = False) -> FastAPI:
     app.include_router(reports_router, prefix="/api/reports", tags=["Reports"])
     app.include_router(ws_router, tags=["WebSocket"])
 
-    # Database lifecycle
-    @app.on_event("startup")
-    async def startup_db():
-        from src.config import get_config
-        if get_config().storage.use_db:
-            from src.db.engine import init_db
-            await init_db()
+    # Static files & dashboard
+    static_dir = Path(__file__).parent.parent / "static"
+    if static_dir.is_dir():
+        app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-    @app.on_event("shutdown")
-    async def shutdown_db():
-        from src.config import get_config
-        if get_config().storage.use_db:
-            from src.db.engine import close_db
-            await close_db()
+    @app.get("/dashboard")
+    async def dashboard():
+        dashboard_path = static_dir / "dashboard.html"
+        if dashboard_path.is_file():
+            return FileResponse(dashboard_path)
+        return {"error": "Dashboard not found"}, 404
 
     @app.get("/api/health")
     async def health_check():

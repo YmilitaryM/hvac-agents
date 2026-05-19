@@ -3,7 +3,8 @@ from contextlib import asynccontextmanager
 import redis.asyncio as aioredis
 from fastapi import FastAPI
 
-from .api import simulation, faults
+from .api import simulation, faults, whatif, rl_env
+from .faults import injector as _fault_injector  # noqa: F401 — ensure module is loaded
 
 
 @asynccontextmanager
@@ -16,6 +17,7 @@ async def lifespan(app: FastAPI):
         app.state.redis = aioredis.from_url(s.redis_url)
     except Exception:
         app.state.redis = None
+    whatif.init_task_manager(app.state.redis)
     yield
     if app.state.redis:
         await app.state.redis.close()
@@ -24,7 +26,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Simulation Engine", version="0.1.0", lifespan=lifespan)
 
 app.include_router(simulation.router, prefix="/api/simulation", tags=["Simulation"])
+app.include_router(whatif.router, prefix="/api/simulation", tags=["What-If"])
 app.include_router(faults.router, prefix="/api/faults", tags=["Faults"])
+app.include_router(rl_env.router, prefix="/api/simulation", tags=["RL Environment"])
 
 
 @app.get("/health")

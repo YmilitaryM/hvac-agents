@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from common.db import create_engine, create_session_factory, Base
 
 from .seed import seed_equipment_types
-from .api import equipment, plants, templates
+from .api import equipment, plants, templates, versions
 
 
 @asynccontextmanager
@@ -26,6 +26,7 @@ app = FastAPI(title="Asset Service", version="0.1.0", lifespan=lifespan)
 app.include_router(equipment.router, prefix="/api/equipment", tags=["Equipment"])
 app.include_router(plants.router, prefix="/api/plants", tags=["Plants"])
 app.include_router(templates.router, prefix="/api/templates", tags=["Templates"])
+app.include_router(versions.router, prefix="/api/versions", tags=["Versions"])
 
 
 @app.get("/health")

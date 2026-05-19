@@ -36,3 +36,35 @@ class ArbitrationResult(BaseModel):
     conflicting_parties: Set[str] = Field(default_factory=set)
     debate_needed: bool = False
     debate_topic: str = ""
+
+    @classmethod
+    def from_opinions(cls, opinions: List[AdvocateOpinion]) -> "ArbitrationResult":
+        verdicts = [op.verdict for op in opinions]
+        rejections = [op for op in opinions if op.is_rejection]
+        has_conflict = any(op.verdict == ReviewVerdict.REJECT for op in opinions) and \
+                       any(op.verdict in (ReviewVerdict.APPROVE, ReviewVerdict.CONDITIONAL_APPROVAL) for op in opinions)
+        all_approve = all(op.verdict == ReviewVerdict.APPROVE for op in opinions)
+        any_reject = any(op.verdict == ReviewVerdict.REJECT for op in opinions)
+
+        if all_approve:
+            decision = "approved"
+            reasoning = "所有Agent一致通过"
+        elif any_reject:
+            decision = "rejected"
+            reasons = '; '.join(c for op in rejections for c in op.concerns)
+            reasoning = f"Agent拒绝 — 理由: {reasons}" if reasons else "Agent拒绝"
+        else:
+            decision = "conditional_approval"
+            reasoning = "有条件通过，需满足附加条件"
+
+        conflicting_parties = {op.advocate for op in opinions if op.is_rejection}
+
+        return cls(
+            decision=decision,
+            reasoning=reasoning,
+            conditions=[c for op in opinions for c in op.concerns],
+            has_conflict=has_conflict,
+            conflicting_parties=conflicting_parties,
+            debate_needed=has_conflict,
+            debate_topic="策略安全性辩论" if has_conflict else "",
+        )

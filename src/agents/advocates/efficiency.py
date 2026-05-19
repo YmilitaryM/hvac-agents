@@ -276,4 +276,31 @@ class EfficiencyAdvocate(BaseAgent):
         solution = input_data.get("solution")
 
         opinion = review_efficiency(strategy, solution)
-        return {"opinion": opinion.model_dump()}
+        result: Dict[str, Any] = {"opinion": opinion.model_dump()}
+
+        if self.llm is not None:
+            try:
+                narrative = await self._generate_efficiency_narrative(opinion, strategy)
+                result["llm_narrative"] = narrative
+            except Exception:
+                self.logger.debug("LLM efficiency narrative failed", exc_info=True)
+
+        return result
+
+    async def _generate_efficiency_narrative(
+        self, opinion: AdvocateOpinion, strategy: Strategy
+    ) -> str:
+        concerns_text = "; ".join(opinion.concerns) if opinion.concerns else "无"
+        prompt = (
+            "你是一个暖通空调节能专家。请用1-2句中文总结以下对控制策略的能效评审意见：\n\n"
+            f"评审结论: {opinion.verdict.value}\n"
+            f"置信度: {opinion.confidence:.0%}\n"
+            f"关切问题: {concerns_text}\n"
+            f"预计COP改善: {strategy.expected_cop_improvement:.2%}\n"
+            f"预计节能: {strategy.expected_energy_saving_kwh_per_h:.1f} kWh/h\n"
+            f"当前负荷: {strategy.current_load_rt:.0f} RT\n"
+            f"电价: {strategy.electricity_price:.2f} CNY/kWh\n"
+            "\n请简要总结能效评审的关键发现。"
+        )
+        response = await self.llm.ainvoke(prompt)
+        return response.content if hasattr(response, "content") else str(response)

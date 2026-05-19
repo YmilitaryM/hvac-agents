@@ -1,0 +1,60 @@
+rules:
+  - name: chiller_surge_risk
+    description: "Chiller surge risk is dangerously high"
+    conditions:
+      - field: surge_risk
+        operator: ">"
+        threshold: 0.8
+        duration_seconds: 60
+    severity: critical
+    group: equipment_protection
+    enabled: true
+    cooldown_seconds: 300
+
+  - name: low_system_cop
+    description: "System COP has dropped below acceptable threshold"
+    conditions:
+      - field: system_cop
+        operator: "<"
+        threshold: 3.5
+        duration_seconds: 300
+    severity: warning
+    group: energy_efficiency
+    enabled: true
+    cooldown_seconds: 900
+
+  - name: high_chw_supply_temp
+    description: "Chilled water supply temperature is too high"
+    conditions:
+      - field: chw_supply_temp
+        operator: ">"
+        threshold: 10.0
+        duration_seconds: 120
+    severity: warning
+    group: energy_efficiency
+    enabled: true
+    cooldown_seconds: 600
+
+  - name: sensor_failure
+    description: "Sensor has failed or is returning invalid readings"
+    conditions:
+      - field: sensor_status
+        operator: "=="
+        threshold: 0
+        duration_seconds: 30
+    severity: critical
+    group: equipment_protection
+    enabled: true
+    cooldown_seconds: 120
+
+  - name: cooling_deficit
+    description: "Cooling capacity cannot meet the current load"
+    conditions:
+      - field: cooling_deficit_rt
+        operator: ">"
+        threshold: 50.0
+        duration_seconds: 60
+    severity: critical
+    group: equipment_protection
+    enabled: true
+    cooldown_seconds: 300

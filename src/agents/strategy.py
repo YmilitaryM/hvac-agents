@@ -178,6 +178,32 @@ def build_strategy(
     )
 
 
+def _build_strategy_reasoning_prompt(
+    strategy: Strategy,
+    solution: OptimizationSolution,
+    total_load_rt: float,
+    t_cw: float,
+    t_chw: float,
+) -> str:
+    """Build a prompt for LLM to generate strategy reasoning narrative."""
+    loads_desc = ", ".join(
+        f"{dev}={load:.0f}RT" for dev, load in solution.chiller_loads.items()
+    )
+    return (
+        "你是一个暖通空调冷水机组优化专家。请用2-3句中文简要解释以下优化策略的推理过程：\n\n"
+        f"总冷负荷: {total_load_rt:.0f} RT\n"
+        f"冷却水进水温度: {t_cw:.1f}°C\n"
+        f"冷冻水出水温度: {t_chw:.1f}°C\n"
+        f"机组负荷分配: {loads_desc}\n"
+        f"预计总功率: {solution.total_power_kw:.1f} kW\n"
+        f"预计COP改善: {strategy.expected_cop_improvement:.2%}\n"
+        f"是否可行: {'是' if solution.is_feasible else '否'}\n"
+        f"约束违反: {', '.join(solution.constraint_violations) if solution.constraint_violations else '无'}\n"
+        f"运行动作数: {len(strategy.actions)}\n"
+        "\n请简要解释优化决策的理由、关键权衡和预期效果。"
+    )
+
+
 class StrategyAgent(BaseAgent):
     """Strategy Agent — generates optimization strategies using the optimizer.
 
@@ -263,9 +289,21 @@ class StrategyAgent(BaseAgent):
             outdoor_wb_temp=float(input_data.get("outdoor_wb_temp", t_cw)),
         )
 
+        # Generate LLM reasoning if available
+        reasoning = ""
+        if self.llm is not None:
+            try:
+                prompt = _build_strategy_reasoning_prompt(
+                    strategy, solution, total_load_rt, t_cw, t_chw
+                )
+                response = await self.llm.ainvoke(prompt)
+                reasoning = response.content if hasattr(response, "content") else str(response)
+            except Exception:
+                self.logger.debug("LLM reasoning generation failed, using defaults", exc_info=True)
+
         # Serialize both for the caller
-        return {
-            "strategy": strategy.model_dump(),
+        result = {
+            "strategy": {**strategy.model_dump(), "llm_reasoning": reasoning},
             "solution": {
                 "chiller_loads": solution.chiller_loads,
                 "total_power_kw": solution.total_power_kw,
@@ -277,3 +315,4 @@ class StrategyAgent(BaseAgent):
                 "constraint_violations": solution.constraint_violations,
             },
         }
+        return result

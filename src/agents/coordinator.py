@@ -372,9 +372,48 @@ class CoordinatorAgent(BaseAgent):
                     exc_info=True,
                 )
 
+        # LLM-powered reasoning enhancement
+        llm_debate_summary = ""
+        if self.llm is not None and debate_state is not None:
+            try:
+                llm_debate_summary = await self._generate_llm_debate_summary(
+                    opinions, debate_state, result
+                )
+            except Exception:
+                self.logger.debug("LLM debate summary failed", exc_info=True)
+
+        result_dict = result.model_dump()
+        if llm_debate_summary:
+            result_dict["llm_reasoning"] = llm_debate_summary
+
         return {
-            "arbitration_result": result.model_dump(),
+            "arbitration_result": result_dict,
             "debate_state": debate_state,
-            "final_opinions": [o.model_dump() for o in opinions],
+            "final_opinions": [op.model_dump() for op in opinions],
             "rl_override": rl_override,
         }
+
+    async def _generate_llm_debate_summary(
+        self,
+        opinions: List[AdvocateOpinion],
+        debate_state: Dict[str, Any],
+        result: ArbitrationResult,
+    ) -> str:
+        """Use LLM to synthesize a natural-language debate summary."""
+        opinion_lines = "\n".join(
+            f"- {op.advocate}: {op.verdict.value} (confidence={op.confidence:.0%})"
+            f"{' — ' + '; '.join(op.concerns) if op.concerns else ''}"
+            for op in opinions
+        )
+        prompt = (
+            "你是一个暖通空调多Agent协调系统。以下是对一个冷水机组控制策略的评审辩论结果，"
+            "请用2-3句中文总结：\n\n"
+            f"最终决策: {result.decision}\n"
+            f"是否有冲突: {'是' if result.has_conflict else '否'}\n"
+            f"辩论轮次: {debate_state.get('current_round', 0)}\n"
+            f"各Agent意见:\n{opinion_lines}\n"
+            f"协调推理: {result.reasoning}\n"
+            "\n请总结协调过程和最终决策的理由。"
+        )
+        response = await self.llm.ainvoke(prompt)
+        return response.content if hasattr(response, "content") else str(response)

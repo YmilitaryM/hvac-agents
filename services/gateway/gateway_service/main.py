@@ -7,6 +7,8 @@ from common.db import create_engine, create_session_factory, Base
 
 from .auth import router as auth_router
 from .proxy import proxy_request, SERVICE_URLS
+from .audit_middleware import AuditMiddleware
+from .api.audit import router as audit_router
 
 
 @asynccontextmanager
@@ -37,8 +39,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(AuditMiddleware)
 
 app.include_router(auth_router, tags=["Auth"])
+app.include_router(audit_router, prefix="/api/audit", tags=["Audit"])
 
 
 @app.api_route("/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])

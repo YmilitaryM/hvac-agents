@@ -4,9 +4,10 @@ Uses a pure-Python detection function for core logic. LLM integration
 will be added later for more sophisticated anomaly classification.
 """
 
+import uuid
 from typing import Any, Dict, List, Optional
 
-from .agents.base import BaseAgent, AgentContext
+from .base import BaseAgent, AgentContext
 
 
 def detect_anomalies(plant_snapshot: Dict[str, Any]) -> Dict[str, Any]:
@@ -148,4 +149,26 @@ class MonitorAgent(BaseAgent):
         """
         snapshot = input_data.get("plant_snapshot", {})
         result = detect_anomalies(snapshot)
+
+        # Integrate with alerting engine — evaluate rule-based alerts
+        try:
+            from ..api.alerts import _alert_engine, _suppression_engine, _escalation_engine
+
+            # Evaluate YAML-configured rules against the full snapshot
+            triggered = _alert_engine.evaluate(snapshot)
+            for alert in triggered:
+                alert_id = f"alert_{uuid.uuid4().hex[:12]}"
+                alert["id"] = alert_id
+
+                suppressed, reason = _suppression_engine.should_suppress(alert)
+                if not suppressed:
+                    # Merge rule-based alerts with the existing anomaly alerts
+                    result["alerts"].append(alert)
+                    _escalation_engine.add_alert(alert_id, alert)
+
+            # Check for pending escalations
+            _escalation_engine.check_escalations()
+        except Exception:
+            pass  # Alerting is best-effort; never fail the monitor run
+
         return result

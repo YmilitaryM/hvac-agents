@@ -10,4 +10,5 @@ dependencies = [
     "asyncpg>=0.30",
     "redis>=5.0",
     "httpx>=0.28",
+    "pyyaml>=6.0",
 ]

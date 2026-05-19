@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from ..plant_builder import build_plant_from_services
 from ..solver import run_plant_snapshot
+from .faults import _injector
 
 router = APIRouter()
 
@@ -25,7 +26,7 @@ async def run_simulation(data: dict, request: Request):
     outdoor_wb = data.get("outdoor_wb_temp", 26.0)
     outdoor_db = data.get("outdoor_db_temp", 33.0)
 
-    result = run_plant_snapshot(assembly, config, outdoor_wb, outdoor_db)
+    result = await run_plant_snapshot(assembly, config, outdoor_wb, outdoor_db, injector=_injector)
 
     if hasattr(request.app.state, "redis") and request.app.state.redis:
         await request.app.state.redis.publish(

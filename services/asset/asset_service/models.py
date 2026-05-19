@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import String, Float, Integer, Boolean, DateTime, JSON, ForeignKey, Text
+from sqlalchemy import String, Float, Integer, Boolean, DateTime, JSON, ForeignKey, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from common.db import Base
@@ -110,3 +110,20 @@ class PipeSegmentModel(Base):
     from_point: Mapped[EquipmentPointModel] = relationship(foreign_keys=[from_point_id])
     to_point: Mapped[EquipmentPointModel] = relationship(foreign_keys=[to_point_id])
     loop: Mapped[LoopModel] = relationship(back_populates="pipe_segments")
+
+
+class EntityVersionModel(Base):
+    __tablename__ = "entity_versions"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    entity_type: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    entity_id: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+    diff_from_prev: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    changed_by: Mapped[str] = mapped_column(String(128), default="system")
+    change_reason: Mapped[str] = mapped_column(String(256), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    __table_args__ = (
+        Index("ix_entity_versions_type_id_ver", "entity_type", "entity_id", "version", unique=True),
+    )

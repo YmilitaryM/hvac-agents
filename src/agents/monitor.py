@@ -148,4 +148,37 @@ class MonitorAgent(BaseAgent):
         """
         snapshot = input_data.get("plant_snapshot", {})
         result = detect_anomalies(snapshot)
+
+        # LLM-enhanced anomaly narrative
+        if self.llm is not None and result.get("anomaly_detected"):
+            try:
+                narrative = await self._generate_anomaly_narrative(result, snapshot)
+                result["llm_narrative"] = narrative
+            except Exception:
+                self.logger.debug("LLM anomaly narrative generation failed", exc_info=True)
+
         return result
+
+    async def _generate_anomaly_narrative(
+        self, result: Dict[str, Any], snapshot: Dict[str, Any]
+    ) -> str:
+        """Use LLM to generate a natural-language anomaly summary."""
+        alerts_desc = "\n".join(
+            f"- [{a['level']}] {a['device']}: {a['message']}"
+            for a in result.get("alerts", [])[:5]
+        )
+        health_desc = ", ".join(
+            f"{dev}={score}" for dev, score in result.get("health_scores", {}).items()
+        )
+        prompt = (
+            "你是一个暖通空调设备监控专家。以下是设备异常检测结果，"
+            "请用1-2句中文总结当前系统状态和需要关注的重点：\n\n"
+            f"总冷负荷: {snapshot.get('total_cooling_load_rt', 'N/A')} RT\n"
+            f"系统COP: {snapshot.get('system_cop', 'N/A')}\n"
+            f"室外湿球温度: {snapshot.get('outdoor_wb_temp', 'N/A')}°C\n"
+            f"告警列表:\n{alerts_desc}\n"
+            f"设备健康分: {health_desc}\n"
+            "\n请简要总结异常情况和应急建议。"
+        )
+        response = await self.llm.ainvoke(prompt)
+        return response.content if hasattr(response, "content") else str(response)

@@ -5,7 +5,8 @@ from fastapi import FastAPI
 
 from common.db import create_engine, create_session_factory, Base
 
-from .api import monitoring
+from .api import monitoring, strategies, reports, alerts, prediction, benchmarking, rl
+from . import models  # ensure models are imported for create_all
 
 
 @asynccontextmanager
@@ -31,6 +32,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Agent Pipeline", version="0.1.0", lifespan=lifespan)
 
 app.include_router(monitoring.router, prefix="/api/monitoring", tags=["Monitoring"])
+app.include_router(strategies.router, prefix="/api/strategies", tags=["Strategies"])
+app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
+app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
+app.include_router(prediction.router, prefix="/api/prediction", tags=["Prediction"])
+app.include_router(benchmarking.router, prefix="/api/benchmarking", tags=["Benchmarking"])
+app.include_router(rl.router, prefix="/api/rl", tags=["RL"])
 
 
 @app.get("/health")

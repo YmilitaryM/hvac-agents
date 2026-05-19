@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from common.schemas.equipment import EquipmentSchema, EquipmentPointSchema
 from ..models import EquipmentModel, EquipmentPointModel, EquipmentTypeModel, PointTemplateModel
+from ..versioning import save_version
 
 router = APIRouter()
 
@@ -149,9 +150,48 @@ async def update_equipment(equipment_id: str, data: dict, db=Depends(get_db)):
     eq = result.scalar_one_or_none()
     if not eq:
         raise HTTPException(404, "Equipment not found")
+
+    # Capture old snapshot before applying changes
+    old_snapshot = {
+        "name": eq.name,
+        "design_params": eq.design_params,
+        "position_x": eq.position_x,
+        "position_y": eq.position_y,
+        "is_active": eq.is_active,
+        "plant_id": eq.plant_id,
+    }
+
     for key in ("name", "plant_id", "design_params", "is_active"):
         if key in data:
             setattr(eq, key, data[key])
+    if "position_x" in data:
+        eq.position_x = data["position_x"]
+    if "position_y" in data:
+        eq.position_y = data["position_y"]
+
+    # Build new snapshot after applying changes
+    new_snapshot = {
+        "name": eq.name,
+        "design_params": eq.design_params,
+        "position_x": eq.position_x,
+        "position_y": eq.position_y,
+        "is_active": eq.is_active,
+        "plant_id": eq.plant_id,
+    }
+
+    changed_by = data.get("changed_by", "system")
+    change_reason = data.get("change_reason", "")
+
+    await save_version(
+        session=db,
+        entity_type="equipment_params",
+        entity_id=equipment_id,
+        old_snapshot=old_snapshot,
+        new_snapshot=new_snapshot,
+        changed_by=changed_by,
+        change_reason=change_reason,
+    )
+
     await db.commit()
     await db.refresh(eq)
     return _equipment_to_schema_sync(eq)

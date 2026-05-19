@@ -210,4 +210,30 @@ class ComplianceAdvocate(BaseAgent):
         solution = input_data.get("solution")
 
         opinion = review_compliance(strategy, solution)
-        return {"opinion": opinion.model_dump()}
+        result: Dict[str, Any] = {"opinion": opinion.model_dump()}
+
+        if self.llm is not None:
+            try:
+                narrative = await self._generate_compliance_narrative(opinion, strategy)
+                result["llm_narrative"] = narrative
+            except Exception:
+                self.logger.debug("LLM compliance narrative failed", exc_info=True)
+
+        return result
+
+    async def _generate_compliance_narrative(
+        self, opinion: AdvocateOpinion, strategy: Strategy
+    ) -> str:
+        concerns_text = "; ".join(opinion.concerns) if opinion.concerns else "无"
+        prompt = (
+            "你是一个碳排放合规专家。请用1-2句中文总结以下对控制策略的合规评审意见：\n\n"
+            f"评审结论: {opinion.verdict.value}\n"
+            f"置信度: {opinion.confidence:.0%}\n"
+            f"关切问题: {concerns_text}\n"
+            f"电网碳强度: {strategy.carbon_intensity:.2f} kgCO2/kWh\n"
+            f"预计碳减排: {strategy.expected_carbon_saving_kg_per_h or 0:.1f} kgCO2/h\n"
+            f"当前负荷: {strategy.current_load_rt:.0f} RT\n"
+            "\n请简要总结合规评审的关键发现。"
+        )
+        response = await self.llm.ainvoke(prompt)
+        return response.content if hasattr(response, "content") else str(response)

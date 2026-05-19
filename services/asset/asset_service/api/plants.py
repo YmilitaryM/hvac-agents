@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import PlantModel, LoopModel, PipeSegmentModel, EquipmentModel, EquipmentPointModel
 from ..validation import validate_plant_topology
+from ..versioning import save_version
 
 router = APIRouter()
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
@@ -75,6 +76,40 @@ async def create_plant(data: dict, db=Depends(get_db)):
 
     await db.commit()
     await db.refresh(plant)
+
+    # Save initial version snapshot
+    loops_result = await db.execute(
+        select(LoopModel).where(LoopModel.plant_id == plant.id)
+    )
+    plant_loops = loops_result.scalars().all()
+
+    eq_result = await db.execute(
+        select(EquipmentModel).where(EquipmentModel.plant_id == plant.id)
+    )
+    plant_equipment = eq_result.scalars().all()
+
+    new_snapshot = {
+        "name": plant.name,
+        "description": plant.description,
+        "data_source_mode": plant.data_source_mode,
+        "is_active": plant.is_active,
+        "loops": [
+            {"id": l.id, "name": l.name, "fluid_type": l.fluid_type, "loop_type": l.loop_type}
+            for l in plant_loops
+        ],
+        "equipment_ids": [e.id for e in plant_equipment],
+    }
+    user_id = data.get("changed_by", "system")
+    await save_version(
+        session=db,
+        entity_type="plant_topology",
+        entity_id=plant.id,
+        old_snapshot={},
+        new_snapshot=new_snapshot,
+        changed_by=user_id,
+        change_reason="Plant created",
+    )
+    await db.commit()
 
     errors, warnings = await validate_plant_topology(plant.id, db)
     return {
@@ -145,6 +180,51 @@ async def get_plant(plant_id: str, db=Depends(get_db)):
 @router.put("/{plant_id}/pipe-segments")
 async def update_pipe_segments(plant_id: str, segments: list[dict], db=Depends(get_db)):
     """Batch update/create pipe segments (for table editor)."""
+    # Capture old plant topology state for versioning
+    plant_result = await db.execute(
+        select(PlantModel).where(PlantModel.id == plant_id)
+    )
+    plant = plant_result.scalar_one_or_none()
+    if not plant:
+        raise HTTPException(404, "Plant not found")
+
+    old_loops_result = await db.execute(
+        select(LoopModel).where(LoopModel.plant_id == plant_id)
+    )
+    old_loops = old_loops_result.scalars().all()
+
+    old_pipes_result = await db.execute(
+        select(PipeSegmentModel).join(LoopModel).where(LoopModel.plant_id == plant_id)
+    )
+    old_pipes = old_pipes_result.scalars().all()
+
+    old_equipment_result = await db.execute(
+        select(EquipmentModel).where(EquipmentModel.plant_id == plant_id)
+    )
+    old_equipment = old_equipment_result.scalars().all()
+
+    old_snapshot = {
+        "name": plant.name,
+        "description": plant.description,
+        "data_source_mode": plant.data_source_mode,
+        "loops": [
+            {"id": l.id, "name": l.name, "fluid_type": l.fluid_type, "loop_type": l.loop_type}
+            for l in old_loops
+        ],
+        "pipe_segments": [
+            {
+                "id": p.id,
+                "loop_id": p.loop_id,
+                "from_point_id": p.from_point_id,
+                "to_point_id": p.to_point_id,
+                "diameter_mm": p.diameter_mm,
+                "length_m": p.length_m,
+            }
+            for p in old_pipes
+        ],
+        "equipment_ids": [e.id for e in old_equipment],
+    }
+
     for seg in segments:
         if seg.get("id"):
             result = await db.execute(
@@ -168,6 +248,53 @@ async def update_pipe_segments(plant_id: str, segments: list[dict], db=Depends(g
                 valve_id=seg.get("valve_id"),
             )
             db.add(ps)
+
+    # Build new snapshot from the (still-uncommitted) pipe segment state
+    new_pipes_result = await db.execute(
+        select(PipeSegmentModel).join(LoopModel).where(LoopModel.plant_id == plant_id)
+    )
+    new_pipes = new_pipes_result.scalars().all()
+    new_loops_result = await db.execute(
+        select(LoopModel).where(LoopModel.plant_id == plant_id)
+    )
+    new_loops = new_loops_result.scalars().all()
+    new_equipment_result = await db.execute(
+        select(EquipmentModel).where(EquipmentModel.plant_id == plant_id)
+    )
+    new_equipment = new_equipment_result.scalars().all()
+
+    new_snapshot = {
+        "name": plant.name,
+        "description": plant.description,
+        "data_source_mode": plant.data_source_mode,
+        "loops": [
+            {"id": l.id, "name": l.name, "fluid_type": l.fluid_type, "loop_type": l.loop_type}
+            for l in new_loops
+        ],
+        "pipe_segments": [
+            {
+                "id": p.id,
+                "loop_id": p.loop_id,
+                "from_point_id": p.from_point_id,
+                "to_point_id": p.to_point_id,
+                "diameter_mm": p.diameter_mm,
+                "length_m": p.length_m,
+            }
+            for p in new_pipes
+        ],
+        "equipment_ids": [e.id for e in new_equipment],
+    }
+
+    await save_version(
+        session=db,
+        entity_type="plant_topology",
+        entity_id=plant_id,
+        old_snapshot=old_snapshot,
+        new_snapshot=new_snapshot,
+        changed_by="system",
+        change_reason="Pipe segments updated",
+    )
+
     await db.commit()
     errors, warnings = await validate_plant_topology(plant_id, db)
     return {"status": "ok", "validation": {"errors": errors, "warnings": warnings}}
