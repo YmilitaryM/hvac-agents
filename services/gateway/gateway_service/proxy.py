@@ -38,7 +38,7 @@ async def proxy_request(request: Request):
 
     # Forward relevant headers to backend services
     headers = {}
-    for key in ("authorization", "content-type", "accept"):
+    for key in ("authorization", "content-type", "accept", "x-request-id", "x-correlation-id"):
         val = request.headers.get(key)
         if val:
             headers[key] = val

@@ -169,12 +169,6 @@ async def _run_whatif(
         tm.fail_task(task_id, str(e))
 
 
-def _run_snapshot_sync(assembly, config: dict, outdoor_wb: float, outdoor_db: float) -> dict:
-    """Synchronous wrapper for run_plant_snapshot, usable with asyncio.to_thread."""
-    import asyncio as _asyncio
-    return _asyncio.run(run_plant_snapshot(assembly, config, outdoor_wb, outdoor_db, injector=None))
-
-
 def _generate_default_weather(num_hours: int) -> list[dict]:
     """Generate default weather profile for simulation."""
     weather = []

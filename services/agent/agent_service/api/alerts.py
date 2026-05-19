@@ -18,7 +18,9 @@ _escalation_engine = EscalationEngine()
 
 
 @router.get("/rules")
-async def get_rules():
+async def get_rules(
+    user: dict = Depends(require_role(Role.VIEWER, Role.OPERATOR, Role.ENGINEER, Role.ADMIN)),
+):
     return {"rules": _alert_engine.get_rules()}
 
 
@@ -56,5 +58,7 @@ async def set_maintenance(
 
 
 @router.get("/escalations")
-async def get_escalations():
+async def get_escalations(
+    user: dict = Depends(require_role(Role.OPERATOR, Role.ENGINEER, Role.ADMIN)),
+):
     return {"escalations": _escalation_engine.check_escalations()}

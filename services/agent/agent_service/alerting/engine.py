@@ -134,10 +134,16 @@ class AlertEngine:
 
             if all_passed:
                 self._last_triggered[rule.name] = now
+                # Extract device_id from first condition's field path
+                device = ""
+                if rule.conditions:
+                    parts = rule.conditions[0].field.split(".")
+                    if len(parts) >= 2:
+                        device = parts[1]  # e.g. "chillers.CH-1.surge_risk" -> "CH-1"
                 triggered.append({
                     "timestamp": now,
                     "level": rule.severity.value,
-                    "device": "",
+                    "device": device,
                     "message": f"[{rule.name}] {rule.description}",
                     "rule_name": rule.name,
                     "group": rule.group,

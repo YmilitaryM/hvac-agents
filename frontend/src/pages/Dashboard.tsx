@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import KpiCard from '../components/KpiCard';
-import { fetchKpi, fetchAlerts } from '../api/monitoring';
+import { fetchKpi, fetchSnapshot, fetchAlerts } from '../api/monitoring';
 
-const CHART_DATA = [
+const FALLBACK_CHART = [
   { time: '00:00', cop: 4.2, load: 280, power: 230 },
   { time: '02:00', cop: 4.1, load: 240, power: 205 },
   { time: '04:00', cop: 4.0, load: 200, power: 175 },
@@ -18,47 +18,61 @@ const CHART_DATA = [
   { time: '22:00', cop: 4.4, load: 260, power: 205 },
 ];
 
-const DEVICE_DATA = [
-  { name: 'CH-1 (离心机)', status: '运行', load: '85%', cop: 4.8 },
-  { name: 'CH-2 (离心机)', status: '运行', load: '72%', cop: 4.5 },
-  { name: 'CT-1 (冷却塔)', status: '运行', fan: '40 Hz', approach: '4.2°C' },
-  { name: 'P-CHW-1 (冷冻泵)', status: '运行', freq: '42 Hz', flow: '320 m³/h' },
-  { name: 'P-CW-1 (冷却泵)', status: '运行', freq: '38 Hz', flow: '400 m³/h' },
-];
-
 export default function Dashboard() {
-  const { data: kpi } = useQuery({
+  const { data: kpi, isError: kpiError } = useQuery({
     queryKey: ['kpi'],
     queryFn: fetchKpi,
     refetchInterval: 5000,
   });
 
-  const { data: alertData } = useQuery({
+  const { data: snapshot, isError: snapError } = useQuery({
+    queryKey: ['snapshot'],
+    queryFn: fetchSnapshot,
+    refetchInterval: 10000,
+  });
+
+  const { data: alertData, isError: alertError } = useQuery({
     queryKey: ['alerts', {}],
     queryFn: () => fetchAlerts({ acknowledged: false }),
     refetchInterval: 10000,
   });
 
   const k = kpi?.kpi || {};
+  const snap = snapshot || {};
   const alerts = alertData?.alerts || [];
+
+  const copHistory = snap.cop_history || [];
+  const chartData = copHistory.length > 0 ? copHistory : FALLBACK_CHART;
+
+  const chillers = snap.chillers || {};
+  const pumps = snap.chw_pumps || {};
+  const towers = snap.cooling_towers || {};
+
+  const hasErrors = kpiError || snapError || alertError;
 
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">系统总览</h2>
 
+      {hasErrors && (
+        <div className="bg-yellow-900/50 border border-yellow-600 rounded-lg p-3 mb-4 text-sm text-yellow-300">
+          ⚠ 部分数据加载失败，显示内容可能不是最新数据
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <KpiCard label="系统 COP" value={k.system_cop?.toFixed(2) || '4.45'} color="text-cyan-400" />
-        <KpiCard label="冷负荷 (RT)" value={k.total_cooling_load_rt?.toFixed(0) || '320'} />
-        <KpiCard label="总功率 (kW)" value={k.total_power_kw?.toFixed(0) || '245'} />
-        <KpiCard label="室外湿球温度 (°C)" value={k.outdoor_wb_temp?.toFixed(1) || '26.0'} />
+        <KpiCard label="系统 COP" value={k.system_cop != null ? k.system_cop.toFixed(2) : '--'} color="text-cyan-400" />
+        <KpiCard label="冷负荷 (RT)" value={k.total_cooling_load_rt != null ? k.total_cooling_load_rt.toFixed(0) : '--'} />
+        <KpiCard label="总功率 (kW)" value={k.total_power_kw != null ? k.total_power_kw.toFixed(0) : '--'} />
+        <KpiCard label="室外湿球温度 (°C)" value={k.outdoor_wb_temp != null ? k.outdoor_wb_temp.toFixed(1) : '--'} />
       </div>
 
       {/* Main Chart: COP / Load / Power */}
       <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
         <h3 className="text-sm text-slate-400 uppercase mb-3">COP / 负荷 / 功率 趋势</h3>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={CHART_DATA}>
+          <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
             <XAxis dataKey="time" stroke="#64748b" fontSize={12} />
             <YAxis yAxisId="left" stroke="#64748b" fontSize={12} />
@@ -85,17 +99,45 @@ export default function Dashboard() {
         <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
           <h3 className="text-sm text-slate-400 uppercase mb-3">设备状态</h3>
           <div className="space-y-2">
-            {DEVICE_DATA.map(d => (
-              <div key={d.name} className="flex items-center justify-between bg-slate-700/50 rounded p-3">
-                <div>
-                  <div className="text-sm font-medium">{d.name}</div>
-                  <div className="text-xs text-slate-400 mt-0.5">
-                    {Object.entries(d).filter(([k]) => k !== 'name' && k !== 'status').map(([k, v]) => `${k}: ${v}`).join(' | ')}
+            {Object.keys(chillers).length === 0 && Object.keys(pumps).length === 0 ? (
+              <div className="text-slate-500 text-sm text-center py-8">等待仿真数据...</div>
+            ) : (
+              <>
+                {Object.entries(chillers).map(([id, ch]: [string, any]) => (
+                  <div key={id} className="flex items-center justify-between bg-slate-700/50 rounded p-3">
+                    <div>
+                      <div className="text-sm font-medium">{ch.name || id}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        PLR: {ch.plr != null ? (ch.plr * 100).toFixed(0) + '%' : '--'} | COP: {ch.cop != null ? ch.cop.toFixed(1) : '--'} | 功率: {ch.power_kw != null ? ch.power_kw.toFixed(0) : '--'} kW
+                      </div>
+                    </div>
+                    <span className={`w-2 h-2 rounded-full ${ch.status === 'surging' ? 'bg-red-400' : 'bg-green-400'}`} title={ch.status} />
                   </div>
-                </div>
-                <span className="w-2 h-2 rounded-full bg-green-400" title={d.status} />
-              </div>
-            ))}
+                ))}
+                {Object.entries(pumps).map(([id, p]: [string, any]) => (
+                  <div key={id} className="flex items-center justify-between bg-slate-700/50 rounded p-3">
+                    <div>
+                      <div className="text-sm font-medium">{id}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        功率: {p.power_kw != null ? p.power_kw.toFixed(0) : '--'} kW
+                      </div>
+                    </div>
+                    <span className="w-2 h-2 rounded-full bg-green-400" title={p.status || 'running'} />
+                  </div>
+                ))}
+                {Object.entries(towers).map(([id, t]: [string, any]) => (
+                  <div key={id} className="flex items-center justify-between bg-slate-700/50 rounded p-3">
+                    <div>
+                      <div className="text-sm font-medium">{id}</div>
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        功率: {t.power_kw != null ? t.power_kw.toFixed(0) : '--'} kW
+                      </div>
+                    </div>
+                    <span className="w-2 h-2 rounded-full bg-green-400" title={t.status || 'running'} />
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         </div>
 

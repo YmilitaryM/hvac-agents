@@ -10,6 +10,18 @@ router = APIRouter()
 
 # In-memory environment state per session
 _env_sessions: dict[str, dict] = {}
+SESSION_TTL = 7200  # auto-expire sessions after 2 hours of inactivity
+
+
+def _cleanup_expired_sessions(now: float):
+    """Remove sessions that have been inactive beyond SESSION_TTL."""
+    expired = [
+        sid for sid, s in _env_sessions.items()
+        if now - s.get("last_access", 0) > SESSION_TTL
+    ]
+    for sid in expired:
+        del _env_sessions[sid]
+
 
 # Reward weights (configurable)
 DEFAULT_WEIGHTS = {
@@ -59,6 +71,7 @@ async def rl_reset(data: dict, request: Request):
         "steps": 0,
         "done": False,
         "last_action": None,
+        "last_access": time.time(),
     }
 
     weather = _default_weather(weather_hour)
@@ -88,6 +101,9 @@ async def rl_step(data: dict, request: Request):
 
     if session["done"]:
         raise HTTPException(400, "Episode is done. Call /rl/reset to start new episode.")
+
+    session["last_access"] = time.time()
+    _cleanup_expired_sessions(time.time())
 
     # Enforce action bounds
     for key, (lo, hi) in ACTION_BOUNDS.items():
@@ -260,4 +276,5 @@ def _simulate_snapshot(weather: dict, action: dict, weather_hour: int = 0) -> di
         "total_power_kw": round(power_kw, 1),
         "total_cooling_load_rt": round(load_rt, 1),
         "surge_risk": 0.1 if cop > 4 else 0.6,
+        "chillers": {},
     }

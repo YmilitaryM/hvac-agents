@@ -1,23 +1,30 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { fetchVersions, getVersionDiff } from '../api/versions';
-
-const MOCK_USERS = [
-  { id: 'u1', username: 'admin', role: 'ADMIN', email: 'admin@hvac.local', created: '2025-01-15' },
-  { id: 'u2', username: 'engineer1', role: 'ENGINEER', email: 'eng1@hvac.local', created: '2025-02-01' },
-  { id: 'u3', username: 'operator1', role: 'OPERATOR', email: 'op1@hvac.local', created: '2025-03-10' },
-  { id: 'u4', username: 'viewer1', role: 'VIEWER', email: 'viewer@hvac.local', created: '2025-04-20' },
-];
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchVersions, getVersionDiff, rollbackVersion } from '../api/versions';
 
 const ROLE_LABELS: Record<string, string> = { ADMIN: '管理员', ENGINEER: '工程师', OPERATOR: '操作员', VIEWER: '观察者', AUDITOR: '审计员' };
+
+async function fetchUsers() {
+  const resp = await fetch('/api/auth/users');
+  if (!resp.ok) return { users: [] };
+  return resp.json();
+}
 
 type Tab = 'users' | 'versions';
 
 export default function Settings() {
+  const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>('users');
   const [entityType, setEntityType] = useState('plant_topology');
   const [entityId, setEntityId] = useState('plant-1');
   const [diffVer, setDiffVer] = useState<number | null>(null);
+  const [rollbackReason, setRollbackReason] = useState('');
+
+  const { data: userData } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+    enabled: tab === 'users',
+  });
 
   const { data: versions } = useQuery({
     queryKey: ['versions', entityType, entityId],
@@ -31,7 +38,18 @@ export default function Settings() {
     enabled: tab === 'versions' && diffVer !== null,
   });
 
+  const rollbackMut = useMutation({
+    mutationFn: (params: { targetVersion: number; reason: string }) =>
+      rollbackVersion(entityType, entityId, params.targetVersion, params.reason),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['versions', entityType, entityId] });
+      setDiffVer(null);
+      setRollbackReason('');
+    },
+  });
+
   const verList = versions?.versions || [];
+  const users = userData?.users || [];
 
   return (
     <div>
@@ -55,28 +73,32 @@ export default function Settings() {
 
       {tab === 'users' && (
         <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-700">
-              <tr>
-                <th className="text-left p-3">用户名</th>
-                <th className="text-left p-3">角色</th>
-                <th className="text-left p-3">邮箱</th>
-                <th className="text-left p-3">创建时间</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MOCK_USERS.map(u => (
-                <tr key={u.id} className="border-t border-slate-700">
-                  <td className="p-3">{u.username}</td>
-                  <td className="p-3">
-                    <span className="px-2 py-0.5 rounded text-xs bg-slate-700">{ROLE_LABELS[u.role] || u.role}</span>
-                  </td>
-                  <td className="p-3 text-slate-400">{u.email}</td>
-                  <td className="p-3 text-slate-400">{u.created}</td>
+          {users.length === 0 ? (
+            <div className="text-slate-500 text-center py-8 text-sm">暂无用户数据</div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-slate-700">
+                <tr>
+                  <th className="text-left p-3">用户名</th>
+                  <th className="text-left p-3">角色</th>
+                  <th className="text-left p-3">邮箱</th>
+                  <th className="text-left p-3">创建时间</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {users.map((u: any) => (
+                  <tr key={u.id} className="border-t border-slate-700">
+                    <td className="p-3">{u.username}</td>
+                    <td className="p-3">
+                      <span className="px-2 py-0.5 rounded text-xs bg-slate-700">{ROLE_LABELS[u.role] || u.role}</span>
+                    </td>
+                    <td className="p-3 text-slate-400">{u.email || '--'}</td>
+                    <td className="p-3 text-slate-400">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '--'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
@@ -139,12 +161,27 @@ export default function Settings() {
                 {JSON.stringify(diff.diff || diff, null, 2)}
               </pre>
               {diffVer && (
-                <button
-                  className="mt-3 bg-yellow-600 hover:bg-yellow-500 px-3 py-1.5 rounded text-sm"
-                  onClick={() => alert('回滚功能将调用仿真引擎进行预验证')}
-                >
-                  回滚到 v{diffVer}
-                </button>
+                <div className="mt-3 space-y-2">
+                  <input
+                    value={rollbackReason}
+                    onChange={e => setRollbackReason(e.target.value)}
+                    placeholder="回滚原因（必填）"
+                    className="bg-slate-700 border border-slate-600 rounded px-2 py-1 w-full text-sm"
+                  />
+                  <button
+                    className="bg-yellow-600 hover:bg-yellow-500 disabled:bg-slate-600 px-3 py-1.5 rounded text-sm"
+                    disabled={!rollbackReason.trim() || rollbackMut.isPending}
+                    onClick={() => rollbackMut.mutate({ targetVersion: diffVer, reason: rollbackReason })}
+                  >
+                    {rollbackMut.isPending ? '回滚中...' : `回滚到 v${diffVer}`}
+                  </button>
+                  {rollbackMut.isError && (
+                    <p className="text-red-400 text-xs">回滚失败: {(rollbackMut.error as any)?.message}</p>
+                  )}
+                  {rollbackMut.isSuccess && (
+                    <p className="text-green-400 text-xs">回滚成功</p>
+                  )}
+                </div>
               )}
             </div>
           )}

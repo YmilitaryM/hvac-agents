@@ -38,7 +38,9 @@ class TaskManager:
         return task_id
 
     def update_progress(self, task_id: str, progress_pct: float, status: str = "running"):
-        task = self._tasks.get(task_id, {})
+        task = self._tasks.get(task_id)
+        if task is None:
+            return
         task["progress_pct"] = progress_pct
         task["status"] = status
         if self._redis:
@@ -48,7 +50,9 @@ class TaskManager:
                 pass
 
     def complete_task(self, task_id: str, result: dict):
-        task = self._tasks.get(task_id, {})
+        task = self._tasks.get(task_id)
+        if task is None:
+            return
         task["status"] = "completed"
         task["progress_pct"] = 100
         task["result"] = result
@@ -60,7 +64,9 @@ class TaskManager:
                 pass
 
     def fail_task(self, task_id: str, error: str):
-        task = self._tasks.get(task_id, {})
+        task = self._tasks.get(task_id)
+        if task is None:
+            return
         task["status"] = "failed"
         task["error"] = error
         task["completed_at"] = time.time()

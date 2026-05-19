@@ -29,11 +29,11 @@ export async function createSnapshot(data: {
   return r.json();
 }
 
-export async function rollbackVersion(entityType: string, entityId: string, version: number) {
+export async function rollbackVersion(entityType: string, entityId: string, targetVersion: number, reason?: string) {
   const r = await fetch(`${BASE}/${entityType}/${entityId}/rollback`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ version }),
+    body: JSON.stringify({ target_version: targetVersion, reason: reason || '', validate: true }),
   });
   return r.json();
 }

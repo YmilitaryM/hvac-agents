@@ -32,24 +32,24 @@ class EscalationEngine:
             already_escalated = alert.get("escalated_to", "")
 
             if severity == "critical":
+                # Shorter threshold first: phone at 5 min, superior at 30 min
+                # Re-read escalated_to after each modification to avoid stale writes
+                if age > 300 and "phone" not in already_escalated:  # 5 min
+                    actions.append({
+                        "alert_id": alert_id,
+                        "action": "notify_phone",
+                        "level": EscalationLevel.PHONE,
+                    })
+                    already_escalated = already_escalated + ",phone" if already_escalated else "phone"
+                    alert["escalated_to"] = already_escalated
                 if age > 1800 and "superior" not in already_escalated:  # 30 min
                     actions.append({
                         "alert_id": alert_id,
                         "action": "notify_superior",
                         "level": EscalationLevel.SUPERIOR,
                     })
-                    alert["escalated_to"] = (
-                        already_escalated + ",superior" if already_escalated else "superior"
-                    )
-                elif age > 300 and "phone" not in already_escalated:  # 5 min
-                    actions.append({
-                        "alert_id": alert_id,
-                        "action": "notify_phone",
-                        "level": EscalationLevel.PHONE,
-                    })
-                    alert["escalated_to"] = (
-                        already_escalated + ",phone" if already_escalated else "phone"
-                    )
+                    already_escalated = already_escalated + ",superior" if already_escalated else "superior"
+                    alert["escalated_to"] = already_escalated
             elif severity == "warning":
                 if age > 14400:  # 4 hours
                     actions.append({

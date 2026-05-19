@@ -4,9 +4,14 @@ Reads request body without consuming the stream so downstream proxy can still us
 """
 import asyncio
 import json
+import re
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from .models import AuditLogModel
+
+_UUID_RE = re.compile(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+)
 
 
 class AuditMiddleware(BaseHTTPMiddleware):
@@ -55,7 +60,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
             resource_type = parts[1] if len(parts) >= 2 and parts[0] == "api" else "unknown"
             resource_id = ""
             for part in parts[2:]:
-                if len(part) >= 8 and part.isalnum():
+                # Match standard UUIDs first, then hex ids (8+ alnum chars)
+                if _UUID_RE.match(part) or (part.isalnum() and len(part) >= 8):
                     resource_id = part
                     break
 

@@ -66,7 +66,13 @@ async def predict_load(
     blend_result = _blender.blend(physics_load, ml_load, ml_confidence)
 
     # Forecast
-    forecast = _blender.generate_forecast(blend_result["blended_load_rt"], time_features["hour"])
+    forecast = _blender.generate_forecast(
+        blend_result["blended_load_rt"],
+        time_features["hour"],
+        building_type=data.get("building_type", "office"),
+        day_of_week=time_features.get("day_of_week", 0),
+        is_holiday=time_features.get("is_holiday", False),
+    )
 
     return {
         "timestamp": data.get("timestamp", time.time()),

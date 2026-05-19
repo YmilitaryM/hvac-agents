@@ -53,19 +53,36 @@ class DRLTrainer:
         }
 
         all_episode_rewards = []
+        consecutive_failures = 0
 
         async with httpx.AsyncClient() as client:
             for ep in range(num_episodes):
                 # Reset environment
-                reset_resp = await client.post(
-                    f"{self.sim_url}/api/simulation/rl/reset",
-                    json={
-                        "plant_id": plant_id,
-                        "weather_hour": ep * steps_per_episode,
-                    },
-                )
-                if reset_resp.status_code != 200:
+                try:
+                    reset_resp = await client.post(
+                        f"{self.sim_url}/api/simulation/rl/reset",
+                        json={
+                            "plant_id": plant_id,
+                            "weather_hour": ep * steps_per_episode,
+                        },
+                    )
+                except httpx.ConnectError:
+                    consecutive_failures += 1
+                    if consecutive_failures > 3:
+                        self._progress["status"] = "failed"
+                        self._training = False
+                        return {"status": "failed", "error": "Simulation service unavailable"}
+                    await asyncio.sleep(2)
                     continue
+
+                if reset_resp.status_code != 200:
+                    consecutive_failures += 1
+                    if consecutive_failures > 3:
+                        self._progress["status"] = "failed"
+                        self._training = False
+                        return {"status": "failed", "error": "Simulation RL API returned errors"}
+                    continue
+                consecutive_failures = 0
                 reset_data = reset_resp.json()
                 session_id = reset_data["session_id"]
                 state = reset_data["state"]
@@ -82,14 +99,20 @@ class DRLTrainer:
                     action_dict, raw_action = self.agent.select_action(state)
 
                     # Step environment
-                    step_resp = await client.post(
-                        f"{self.sim_url}/api/simulation/rl/step",
-                        json={
-                            "session_id": session_id,
-                            "action": action_dict,
-                        },
-                    )
+                    try:
+                        step_resp = await client.post(
+                            f"{self.sim_url}/api/simulation/rl/step",
+                            json={
+                                "session_id": session_id,
+                                "action": action_dict,
+                            },
+                        )
+                    except (httpx.ConnectError, httpx.TimeoutException):
+                        consecutive_failures += 1
+                        break
+
                     if step_resp.status_code != 200:
+                        consecutive_failures += 1
                         break
                     step_data = step_resp.json()
 

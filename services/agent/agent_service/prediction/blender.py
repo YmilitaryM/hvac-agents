@@ -23,26 +23,43 @@ class PredictionBlender:
             "method": "physics_only" if alpha > 0.95 else ("ml_dominant" if alpha < 0.5 else "hybrid")
         }
 
-    def generate_forecast(self, current_load: float, hour: int, building_type: str = "office") -> dict:
+    def generate_forecast(self, current_load: float, hour: int, building_type: str = "office",
+                          day_of_week: int = 0, is_holiday: bool = False) -> dict:
         """Generate forecast for 15min, 1h, 6h, 24h based on typical daily profile.
 
-        Uses a simple heuristic multiplier based on time of day and building type.
+        Uses a simple heuristic multiplier based on time of day, building type,
+        day of week, and holiday status.
         """
         # Typical office load profile multipliers (relative to baseline)
-        profiles = {
-            "office": {0: 0.2, 1: 0.15, 2: 0.1, 3: 0.1, 4: 0.1, 5: 0.15, 6: 0.3,
-                       7: 0.6, 8: 0.85, 9: 0.95, 10: 1.0, 11: 1.0, 12: 0.95,
-                       13: 0.95, 14: 1.0, 15: 1.0, 16: 0.95, 17: 0.85, 18: 0.7,
-                       19: 0.5, 20: 0.35, 21: 0.25, 22: 0.2, 23: 0.15},
+        weekday_profile = {
+            0: 0.2, 1: 0.15, 2: 0.1, 3: 0.1, 4: 0.1, 5: 0.15, 6: 0.3,
+            7: 0.6, 8: 0.85, 9: 0.95, 10: 1.0, 11: 1.0, 12: 0.95,
+            13: 0.95, 14: 1.0, 15: 1.0, 16: 0.95, 17: 0.85, 18: 0.7,
+            19: 0.5, 20: 0.35, 21: 0.25, 22: 0.2, 23: 0.15,
+        }
+        # Weekend/holiday: reduced occupancy
+        weekend_profile = {h: max(0.05, v * 0.4) for h, v in weekday_profile.items()}
+
+        base_profiles = {
+            "office": weekday_profile,
             "hospital": {h: max(0.6, min(1.0, 0.7 + 0.3 * (1 if 8 <= h <= 20 else 0))) for h in range(24)},
-            "data_center": {h: 0.95 for h in range(24)},  # flat profile
+            "data_center": {h: 0.95 for h in range(24)},
         }
 
-        profile = profiles.get(building_type, profiles["office"])
+        base = base_profiles.get(building_type, weekday_profile)
+        is_weekend = day_of_week in (5, 6)  # Saturday=5, Sunday=6
 
         def _load_at(future_hour: float) -> float:
             h = int(future_hour) % 24
-            return current_load * profile.get(h, 1.0)
+            future_day_offset = int(future_hour // 24)
+            future_dow = (day_of_week + future_day_offset) % 7
+            future_weekend = future_dow in (5, 6)
+            if building_type == "office":
+                if future_weekend:
+                    return current_load * weekend_profile.get(h, 0.2)
+                elif is_holiday and future_day_offset == 0:
+                    return current_load * weekend_profile.get(h, 0.2)
+            return current_load * base.get(h, 1.0)
 
         return {
             "forecast_15min_rt": round(_load_at(hour + 0.25), 2),
