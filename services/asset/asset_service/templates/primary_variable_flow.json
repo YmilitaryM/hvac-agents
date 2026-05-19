@@ -1,0 +1,18 @@
+{
+  "name": "一次泵变流量系统",
+  "description": "冷冻水一次泵变流量 + 冷却水定流量，N+1 冗余",
+  "complexity": "medium",
+  "loops": [
+    {"name": "冷冻水回路", "fluid": "chilled_water", "loop_type": "primary", "design_supply_temp": 7.0, "design_return_temp": 12.0},
+    {"name": "冷却水回路", "fluid": "cooling_water", "loop_type": "primary", "design_supply_temp": 30.0, "design_return_temp": 35.0}
+  ],
+  "slots": [
+    {"id": "CH-{n}", "type_code": "centrifugal_chiller", "role": "primary", "count": "N", "standby": "S"},
+    {"id": "P_CHW-{n}", "type_code": "pump", "role": "chw_primary", "count": "N", "standby": "S"},
+    {"id": "P_CW-{n}", "type_code": "pump", "role": "cw", "count": "N", "standby": "S"},
+    {"id": "CT-{n}", "type_code": "cooling_tower", "role": "primary", "count": "N", "standby": "S"},
+    {"id": "BV-1", "type_code": "control_valve", "role": "bypass"},
+    {"id": "CV-{n}", "type_code": "control_valve", "role": "flow_control", "count": "N"}
+  ],
+  "connections": []
+}
