@@ -18,7 +18,8 @@ class Role(str, Enum):
 
 def create_token(user_id: str, role: Role) -> str:
     s = get_settings()
-    claims = {"sub": user_id, "role": role.value, "iat": int(time.time())}
+    now = int(time.time())
+    claims = {"sub": user_id, "role": role.value, "iat": now, "exp": now + s.jwt_expire_minutes * 60}
     return jwt.encode(claims, s.jwt_secret, algorithm=s.jwt_algorithm)
 
 
@@ -39,7 +40,7 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> dict:
 
 def require_role(*roles: Role):
     """Dependency: only allow specified roles."""
-    async def checker(user: dict = Depends(get_current_user)) -> dict:
+    def checker(user: dict = Depends(get_current_user)) -> dict:
         if user.get("role") not in [r.value for r in roles]:
             raise HTTPException(status_code=403, detail="Insufficient permissions")
         return user
