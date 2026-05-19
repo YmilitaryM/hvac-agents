@@ -11,6 +11,8 @@
 """
 
 import asyncio
+import logging
+import time
 from typing import Any, Dict, Optional
 
 from langgraph.graph import StateGraph, END
@@ -22,8 +24,11 @@ from .conditional_logic import (
     should_generate_strategy,
     should_enter_debate,
     should_execute,
+    should_reoptimize,
 )
 from .debate import run_debate
+
+logger = logging.getLogger(__name__)
 
 
 class HVACGraph:
@@ -68,6 +73,7 @@ class HVACGraph:
         workflow.add_node("coordinator", self._coordinator_node)
         workflow.add_node("debate", self._debate_node)
         workflow.add_node("safety", self._safety_node)
+        workflow.add_node("parameter", self._parameter_node)
         workflow.add_node("execute", self._execute_node)
 
         # --- Add edges ---
@@ -103,11 +109,18 @@ class HVACGraph:
         # Debate -> Safety (after debate resolves)
         workflow.add_edge("debate", "safety")
 
-        # Safety -> Execute or END
+        # Safety -> Parameter or END
         workflow.add_conditional_edges(
             "safety",
             should_execute,
-            {"execute": "execute", "end": END},
+            {"execute": "parameter", "end": END},
+        )
+
+        # Parameter -> Re-optimize (back to Strategy) or Execute
+        workflow.add_conditional_edges(
+            "parameter",
+            should_reoptimize,
+            {"strategy": "strategy", "execute": "execute"},
         )
 
         # Execute -> END
@@ -125,6 +138,8 @@ class HVACGraph:
     # --- Node implementations ---
 
     async def _monitor_node(self, state: AgentState) -> Dict[str, Any]:
+        t0 = time.monotonic()
+        logger.debug("Node: monitor — checking for anomalies")
         agent = self.agents["monitor"]
         if agent is None:
             return {
@@ -135,9 +150,17 @@ class HVACGraph:
         result = await agent.run(
             {"plant_snapshot": state.get("plant_snapshot", {})}
         )
+        logger.debug(
+            "Node: monitor — done (%.0fms) alerts=%d anomaly=%s",
+            (time.monotonic() - t0) * 1000,
+            len(result.get("alerts", [])),
+            result.get("anomaly_detected"),
+        )
         return result
 
     async def _predict_node(self, state: AgentState) -> Dict[str, Any]:
+        t0 = time.monotonic()
+        logger.debug("Node: predict — forecasting load")
         agent = self.agents["predict"]
         if agent is None:
             return {}
@@ -168,6 +191,11 @@ class HVACGraph:
             }
         )
         forecast = result.get("load_forecast", {})
+        logger.debug(
+            "Node: predict — done (%.0fms) forecast_15min=%.0fRT",
+            (time.monotonic() - t0) * 1000,
+            forecast.get("load_15min", 0),
+        )
         return {
             "predicted_load_rt": forecast.get("load_15min"),
             "load_forecast_15min": forecast.get("load_15min"),
@@ -176,6 +204,8 @@ class HVACGraph:
         }
 
     async def _strategy_node(self, state: AgentState) -> Dict[str, Any]:
+        t0 = time.monotonic()
+        logger.debug("Node: strategy — optimizing chiller load distribution")
         agent = self.agents["strategy"]
         if agent is None:
             return {}
@@ -201,9 +231,18 @@ class HVACGraph:
                 "trigger_type": state.get("trigger_type", "SCHEDULED"),
             }
         )
-        return {"pending_strategy": result.get("strategy")}
+        strategy = result.get("strategy", {})
+        logger.debug(
+            "Node: strategy — done (%.0fms) status=%s actions=%d",
+            (time.monotonic() - t0) * 1000,
+            strategy.get("status", "?"),
+            len(strategy.get("actions", [])),
+        )
+        return {"pending_strategy": strategy}
 
     async def _advocates_node(self, state: AgentState) -> Dict[str, Any]:
+        t0 = time.monotonic()
+        logger.debug("Node: advocates — running 3 advocate reviews")
         """Run all three advocates and collect their opinions."""
         strategy = state.get("pending_strategy", {})
 
@@ -224,9 +263,16 @@ class HVACGraph:
             if r and "opinion" in r:
                 opinions.append(r["opinion"])
 
+        logger.debug(
+            "Node: advocates — done (%.0fms) opinions=%d",
+            (time.monotonic() - t0) * 1000,
+            len(opinions),
+        )
         return {"advocate_opinions": opinions}
 
     async def _coordinator_node(self, state: AgentState) -> Dict[str, Any]:
+        t0 = time.monotonic()
+        logger.debug("Node: coordinator — arbitrating advocate opinions")
         agent = self.agents["coordinator"]
         if agent is None:
             return {}
@@ -236,13 +282,28 @@ class HVACGraph:
                 "pending_strategy": state.get("pending_strategy"),
             }
         )
+        arb = result.get("arbitration_result", {})
+        logger.debug(
+            "Node: coordinator — done (%.0fms) decision=%s",
+            (time.monotonic() - t0) * 1000,
+            arb.get("decision", "?"),
+        )
         return result
 
     async def _debate_node(self, state: AgentState) -> Dict[str, Any]:
+        t0 = time.monotonic()
+        logger.debug("Node: debate — running debate round")
         result = await run_debate(dict(state))
+        logger.debug(
+            "Node: debate — done (%.0fms) round=%d",
+            (time.monotonic() - t0) * 1000,
+            result.get("debate_round", 0),
+        )
         return result
 
     async def _safety_node(self, state: AgentState) -> Dict[str, Any]:
+        t0 = time.monotonic()
+        logger.debug("Node: safety — checking hard constraints")
         agent = self.agents["safety"]
         if agent is None:
             return {
@@ -263,9 +324,67 @@ class HVACGraph:
                 "current_time": state.get("current_time", 0),
             }
         )
-        return {"safety_result": result.get("safety_result", {})}
+        sr = result.get("safety_result", {})
+        logger.debug(
+            "Node: safety — done (%.0fms) passed=%s",
+            (time.monotonic() - t0) * 1000,
+            sr.get("passed"),
+        )
+        return {"safety_result": sr}
+
+    async def _parameter_node(self, state: AgentState) -> Dict[str, Any]:
+        t0 = time.monotonic()
+        logger.debug("Node: parameter — applying deadband, rate limit, PID")
+        agent = self.agents["parameter"]
+        if agent is None:
+            return {"parameter_adjustments": [], "needs_new_strategy": False}
+
+        strategy = state.get("pending_strategy") or {}
+        snapshot = state.get("plant_snapshot") or {}
+        chillers = snapshot.get("chillers", {})
+
+        # Extract target loads from strategy actions
+        target_loads = {}
+        for action in strategy.get("actions", []):
+            if action.get("action") == "set_load" and action.get("value", 0) > 0:
+                target_loads[action["device"]] = action["value"]
+
+        # Extract current loads from snapshot
+        current_loads = {}
+        for name, data in chillers.items():
+            if isinstance(data, dict) and data.get("load_rt", 0) > 0:
+                current_loads[name] = data["load_rt"]
+
+        # Build capacity map
+        capacity_rt = {}
+        for name in set(list(target_loads.keys()) + list(current_loads.keys())):
+            capacity_rt[name] = 500.0
+
+        result = await agent.run({
+            "target_loads": target_loads,
+            "current_loads": current_loads,
+            "capacity_rt": capacity_rt,
+        })
+
+        adjustments = result.get("adjustments", [])
+        needs_new = result.get("needs_new_strategy", False)
+        reopt_count = state.get("reoptimization_count", 0)
+
+        logger.debug(
+            "Node: parameter — done (%.0fms) adjustments=%d needs_new=%s",
+            (time.monotonic() - t0) * 1000,
+            len(adjustments),
+            needs_new,
+        )
+        return {
+            "parameter_adjustments": adjustments,
+            "needs_new_strategy": needs_new,
+            "reoptimization_count": reopt_count + (1 if needs_new else 0),
+        }
 
     async def _execute_node(self, state: AgentState) -> Dict[str, Any]:
+        t0 = time.monotonic()
+        logger.debug("Node: execute — finalizing strategy")
         """Finalize: move pending_strategy to current_strategy, record in history."""
         pending = state.get("pending_strategy", {})
         history = list(state.get("strategy_history", []))
@@ -282,6 +401,12 @@ class HVACGraph:
                 }
             )
 
+        logger.debug(
+            "Node: execute — done (%.0fms) status=%s history=%d",
+            (time.monotonic() - t0) * 1000,
+            pending.get("status", "?") if pending else "noop",
+            len(history),
+        )
         return {
             "current_strategy": pending,
             "pending_strategy": None,
@@ -290,7 +415,14 @@ class HVACGraph:
         }
 
     async def run(self, initial_state: Dict[str, Any]) -> Dict[str, Any]:
+        t0 = time.monotonic()
+        logger.info("Starting HVAC pipeline run (trigger=%s)", initial_state.get("trigger_type", "?"))
         """Run the full workflow with the given initial state."""
         state = AgentState(**initial_state)
         result = await self.graph.ainvoke(state)
+        logger.info(
+            "Pipeline complete (%.0fms) — execution=%s",
+            (time.monotonic() - t0) * 1000,
+            result.get("execution_status", "?"),
+        )
         return result

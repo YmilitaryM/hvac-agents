@@ -38,6 +38,11 @@ _AGENT_STATE_DEFAULTS: Dict[str, Any] = {
     "anomaly_details": "",
     "report_requested": False,
     "report_period": "",
+    "needs_new_strategy": False,
+    "parameter_adjustments": [],
+    "reoptimization_count": 0,
+    "rl_override": None,
+    "rag_context": [],
 }
 
 
@@ -86,6 +91,11 @@ class AgentState(dict):
     anomaly_details: str
     report_requested: bool
     report_period: str
+    needs_new_strategy: bool
+    parameter_adjustments: List[Dict]
+    reoptimization_count: int
+    rl_override: Optional[Dict]
+    rag_context: List[str]
 
     def __init__(self, **kwargs: Any) -> None:
         """Create a new AgentState, filling in defaults for any missing keys."""

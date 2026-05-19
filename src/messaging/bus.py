@@ -131,6 +131,8 @@ class EventBus:
         Calls type-specific handlers first, then catch-all handlers.
         Failed handlers are caught and logged (don't crash the bus).
         """
+        logger.debug("Publishing event: %s from %s", event.event_type.value, event.source)
+
         # Log the event
         self._event_log.append(event)
         if len(self._event_log) > self._max_log_size:

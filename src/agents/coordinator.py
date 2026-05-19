@@ -10,9 +10,8 @@ Core logic is in arbitrate() and run_debate_round() — pure Python, no LLM.
 import random
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.agents.base import AgentContext, BaseAgent
+from src.agents.base import BaseAgent
 from src.schemas.review import AdvocateOpinion, ArbitrationResult, ReviewVerdict
-from src.schemas.state import InvestDebateState
 
 # --- Advocate weights for weighted voting ---
 ADVOCATE_WEIGHTS: Dict[str, float] = {
@@ -221,7 +220,7 @@ def run_debate_round(
     # Otherwise: reduce confidence of conflicting advocates
     updated_opinions = []
     for op in opinions:
-        if op.verdict in (ReviewVerdict.REJECT,):
+        if op.verdict == ReviewVerdict.REJECT:
             updated_opinions.append(
                 AdvocateOpinion(
                     advocate=op.advocate,
@@ -269,10 +268,15 @@ class CoordinatorAgent(BaseAgent):
     manages debates when there are conflicts.
 
     Core logic is in arbitrate() and run_debate_round().
+
+    Optional RL bandit: when provided, the bandit can override the arbitration
+    decision when confidence exceeds the configured threshold. Safety gates run
+    first to enforce hard constraints, then RL can influence the decision.
     """
 
-    def __init__(self, llm=None, context=None):
+    def __init__(self, llm=None, context=None, bandit=None):
         super().__init__(name="coordinator", llm=llm, context=context)
+        self.bandit = bandit
 
     async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Execute coordination: arbitrate opinions, trigger debate if needed.
@@ -315,7 +319,7 @@ class CoordinatorAgent(BaseAgent):
 
         # Trigger debate if needed
         debate_state: Optional[Dict[str, Any]] = None
-        if result.debate_needed and strategy is not None:
+        if result.debate_needed:
             max_rounds = input_data.get("max_debate_rounds", DEFAULT_MAX_DEBATE_ROUNDS)
             debate_state = {
                 "strategy_id": strategy.strategy_id if strategy else "",
@@ -327,24 +331,50 @@ class CoordinatorAgent(BaseAgent):
                 "max_rounds": max_rounds,
             }
             opinions, debate_state = run_debate_round(opinions, debate_state, strategy)
-            # Re-arbitrate with updated opinions
             result = arbitrate(opinions, strategy)
-        elif result.debate_needed:
-            max_rounds = input_data.get("max_debate_rounds", DEFAULT_MAX_DEBATE_ROUNDS)
-            debate_state = {
-                "strategy_id": "",
-                "topic": result.debate_topic,
-                "current_round": 0,
-                "opinions": [o.model_dump() for o in opinions],
-                "consensus_reached": False,
-                "final_verdict": "",
-                "max_rounds": max_rounds,
-            }
-            opinions, debate_state = run_debate_round(opinions, debate_state, None)
-            result = arbitrate(opinions, None)
+
+        # Optional RL bandit override
+        rl_override = None
+        if self.bandit is not None and strategy is not None:
+            try:
+                from src.rl.features import extract_features
+                from src.rl.safety_gates import check_rl_safety_gates
+                from src.config import get_config
+
+                features = extract_features(strategy)
+                gate_result = check_rl_safety_gates(
+                    features, result.decision, strategy.model_dump()
+                )
+
+                if gate_result.get("blocked"):
+                    rl_override = {
+                        "source": "rl_safety_gate",
+                        "original": result.decision,
+                        "override": gate_result.get("action", result.decision),
+                        "reason": gate_result.get("reason", ""),
+                    }
+                else:
+                    action, confidence = self.bandit.predict(features)
+                    threshold = get_config().rl.confidence_threshold
+                    if confidence >= threshold:
+                        rl_override = {
+                            "source": "rl_bandit",
+                            "original": result.decision,
+                            "override": "approved" if action == 1 else "rejected",
+                            "confidence": confidence,
+                        }
+            except ImportError:
+                self.logger.warning("RL override unavailable (missing module), using rule-based decision")
+            except Exception:
+                self.logger.warning(
+                    "RL override failed for strategy %s, using rule-based decision",
+                    getattr(strategy, 'strategy_id', 'unknown'),
+                    exc_info=True,
+                )
 
         return {
             "arbitration_result": result.model_dump(),
             "debate_state": debate_state,
             "final_opinions": [o.model_dump() for o in opinions],
+            "rl_override": rl_override,
         }

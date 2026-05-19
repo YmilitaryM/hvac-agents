@@ -8,3 +8,32 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Environment
+.env
+.env.*
+
+# Logs
+*.log
+
+# Data and models
+data/
+models/*.pkl
+
+# Config (local overrides)
+config/local.toml
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

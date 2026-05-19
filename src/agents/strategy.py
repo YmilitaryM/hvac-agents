@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from src.agents.base import BaseAgent, AgentContext
 from src.optimization.solver import ChillerPlantOptimizer, OptimizationSolution
+from src.reports.kpi_calculator import KW_PER_RT
 from src.schemas.strategy import (
     Strategy,
     StrategyAction,
@@ -128,7 +129,7 @@ def build_strategy(
     )
 
     # --- Calculate expected improvements ---
-    cooling_kw = current_load_rt * 3.517  # kW thermal (1 RT = 3.517 kW)
+    cooling_kw = current_load_rt * KW_PER_RT
     baseline_cop = 5.0  # conservative baseline for typical sub-optimal operation
     baseline_power = cooling_kw / baseline_cop if baseline_cop > 0 else float("inf")
     optimized_power = solution.total_power_kw
@@ -199,9 +200,10 @@ class StrategyAgent(BaseAgent):
         solution: Serialized OptimizationSolution dict.
     """
 
-    def __init__(self, llm=None, optimizer=None, context=None):
+    def __init__(self, llm=None, optimizer=None, context=None, doc_store=None):
         super().__init__(name="strategy", llm=llm, context=context)
         self.optimizer = optimizer
+        self.doc_store = doc_store
 
     async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Run the optimizer and produce a Strategy.

@@ -1,20 +1,52 @@
-"""Monitoring API endpoints for real-time plant data."""
+"""Monitoring API endpoints for real-time plant data.
 
-from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, Query
+Supports dual-mode: PostgreSQL via repositories (when configured),
+or in-memory storage (default/dev).
+"""
 
+import logging
+import time
+from typing import Any, Dict, List
+
+from fastapi import APIRouter, Depends, Query
+
+from src.api.auth import require_auth
+from src.reports.kpi_calculator import KW_PER_RT
+
+from src.api.deps import use_db as _use_db
+
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
-
-# In-memory storage for demo/testing (would be TimescaleDB in production)
+# In-memory storage for dev/testing fallback
 _plant_snapshots: List[Dict[str, Any]] = []
 _alerts: List[Dict[str, Any]] = []
 _health_scores: Dict[str, float] = {}
 
 
+# --- Snapshot endpoints ---
+
 @router.get("/snapshot")
 async def get_latest_snapshot():
     """Get the most recent plant snapshot."""
+    if _use_db():
+        from src.api.deps import get_db_session, get_snapshot_repo
+
+        async for session in get_db_session():
+            repo = get_snapshot_repo(session)
+            sn = await repo.get_latest()
+            if sn:
+                return {"snapshot": {
+                    "timestamp": sn.timestamp,
+                    "total_cooling_load_rt": sn.total_cooling_load_rt,
+                    "total_power_kw": sn.total_power_kw,
+                    "system_cop": sn.system_cop,
+                    "outdoor_wb_temp": sn.outdoor_wb_temp,
+                    "outdoor_db_temp": sn.outdoor_db_temp,
+                    "chillers": sn.chiller_data or {},
+                }}
+            return {"snapshot": None, "message": "No snapshots available"}
+
     if _plant_snapshots:
         return {"snapshot": _plant_snapshots[-1]}
     return {"snapshot": None, "message": "No snapshots available"}
@@ -23,40 +55,119 @@ async def get_latest_snapshot():
 @router.get("/snapshots")
 async def get_snapshots(limit: int = Query(default=100, le=1000)):
     """Get recent plant snapshots."""
+    if _use_db():
+        from src.api.deps import get_db_session, get_snapshot_repo
+
+        async for session in get_db_session():
+            repo = get_snapshot_repo(session)
+            results = await repo.get_range(0, time.time(), limit=limit)
+            return {
+                "snapshots": [
+                    {
+                        "timestamp": s.timestamp,
+                        "total_cooling_load_rt": s.total_cooling_load_rt,
+                        "total_power_kw": s.total_power_kw,
+                        "system_cop": s.system_cop,
+                    }
+                    for s in results
+                ],
+                "count": len(results),
+            }
+
     return {"snapshots": _plant_snapshots[-limit:], "count": len(_plant_snapshots[-limit:])}
 
 
 @router.post("/snapshot")
-async def ingest_snapshot(snapshot: Dict[str, Any]):
+async def ingest_snapshot(snapshot: Dict[str, Any], user: bool = Depends(require_auth)):
     """Ingest a new plant snapshot."""
-    # Add timestamp if missing
     if "timestamp" not in snapshot:
-        import time as _time
-        snapshot["timestamp"] = _time.time()
+        snapshot["timestamp"] = time.time()
+
+    if _use_db():
+        from src.api.deps import get_db_session, get_snapshot_repo
+
+        async for session in get_db_session():
+            repo = get_snapshot_repo(session)
+            chillers = snapshot.get("chillers", {})
+            towers = snapshot.get("cooling_towers", {})
+            pumps = {
+                "chw": snapshot.get("chw_pumps", {}),
+                "cw": snapshot.get("cw_pumps", {}),
+            }
+            await repo.create({
+                "timestamp": snapshot["timestamp"],
+                "total_cooling_load_rt": snapshot.get("total_cooling_load_rt", 0),
+                "total_power_kw": snapshot.get("total_power_kw", 0),
+                "system_cop": snapshot.get("system_cop", 0),
+                "outdoor_wb_temp": snapshot.get("outdoor_wb_temp", 0),
+                "outdoor_db_temp": snapshot.get("outdoor_db_temp", 0),
+                "chiller_data": chillers,
+                "tower_data": towers,
+                "pump_data": pumps,
+                "raw_snapshot": snapshot,
+            })
+            return {"status": "ok", "snapshot_count": 1}
+
     _plant_snapshots.append(snapshot)
-    # Keep only last 10000 snapshots
     if len(_plant_snapshots) > 10000:
         _plant_snapshots[:] = _plant_snapshots[-10000:]
     return {"status": "ok", "snapshot_count": len(_plant_snapshots)}
 
 
+# --- Alert endpoints ---
+
 @router.get("/alerts")
 async def get_alerts(limit: int = Query(default=50, le=500)):
     """Get recent alerts."""
+    if _use_db():
+        from src.api.deps import get_db_session, get_alert_repo
+
+        async for session in get_db_session():
+            repo = get_alert_repo(session)
+            results = await repo.get_recent(limit=limit)
+            return {
+                "alerts": [
+                    {
+                        "timestamp": a.timestamp,
+                        "level": a.level,
+                        "device": a.device,
+                        "message": a.message,
+                        "acknowledged": a.acknowledged,
+                    }
+                    for a in results
+                ],
+                "count": len(results),
+            }
+
     return {"alerts": _alerts[-limit:], "count": len(_alerts[-limit:])}
 
 
 @router.post("/alerts")
-async def ingest_alert(alert: Dict[str, Any]):
+async def ingest_alert(alert: Dict[str, Any], user: bool = Depends(require_auth)):
     """Ingest a new alert."""
     if "timestamp" not in alert:
-        import time as _time
-        alert["timestamp"] = _time.time()
+        alert["timestamp"] = time.time()
+
+    if _use_db():
+        from src.api.deps import get_db_session, get_alert_repo
+
+        async for session in get_db_session():
+            repo = get_alert_repo(session)
+            await repo.create({
+                "timestamp": alert["timestamp"],
+                "level": alert.get("level", "info"),
+                "device": alert.get("device", ""),
+                "message": alert.get("message", ""),
+            })
+            return {"status": "ok", "alert_count": 1}
+
     _alerts.append(alert)
     if len(_alerts) > 5000:
         _alerts[:] = _alerts[-5000:]
     return {"status": "ok", "alert_count": len(_alerts)}
 
+
+# --- Health endpoints ---
 
 @router.get("/health")
 async def get_health_scores():
@@ -65,22 +176,43 @@ async def get_health_scores():
 
 
 @router.post("/health")
-async def update_health_scores(scores: Dict[str, float]):
+async def update_health_scores(scores: Dict[str, float], user: bool = Depends(require_auth)):
     """Update equipment health scores."""
     _health_scores.update(scores)
     return {"status": "ok", "devices": len(_health_scores)}
 
 
+# --- KPI endpoint ---
+
 @router.get("/kpi")
 async def get_realtime_kpi():
     """Get real-time KPI from the latest snapshot."""
+    if _use_db():
+        from src.api.deps import get_db_session, get_snapshot_repo
+
+        async for session in get_db_session():
+            repo = get_snapshot_repo(session)
+            latest = await repo.get_latest()
+            if latest:
+                cop = (latest.total_cooling_load_rt * KW_PER_RT) / latest.total_power_kw if latest.total_power_kw > 0 else 0.0
+                return {
+                    "kpi": {
+                        "total_cooling_load_rt": latest.total_cooling_load_rt,
+                        "total_power_kw": latest.total_power_kw,
+                        "system_cop": round(cop, 2),
+                        "outdoor_wb_temp": latest.outdoor_wb_temp,
+                        "outdoor_db_temp": latest.outdoor_db_temp,
+                    }
+                }
+            return {"kpi": None, "message": "No data"}
+
     if not _plant_snapshots:
         return {"kpi": None, "message": "No data"}
 
     latest = _plant_snapshots[-1]
     total_load = latest.get("total_cooling_load_rt", 0)
     total_power = latest.get("total_power_kw", 0)
-    cop = (total_load * 3.517) / total_power if total_power > 0 else 0.0
+    cop = (total_load * KW_PER_RT) / total_power if total_power > 0 else 0.0
 
     return {
         "kpi": {

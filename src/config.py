@@ -39,6 +39,7 @@ class StorageConfig:
     db_url: str = "postgresql://localhost:5432/hvac"
     redis_url: str = "redis://localhost:6379/0"
     timeseries_table: str = "sensor_data"
+    use_db: bool = False  # True when DATABASE_URL env var is set
 
 
 @dataclass
@@ -47,6 +48,7 @@ class RLConfig:
     model_path: str = "models/rl_reviewer.pkl"
     confidence_threshold: float = 0.85
     training_interval_days: int = 7
+    auto_train: bool = False  # Enable online learning in production
 
 
 @dataclass
@@ -57,6 +59,7 @@ class Config:
     storage: StorageConfig = field(default_factory=StorageConfig)
     rl: RLConfig = field(default_factory=RLConfig)
     debug: bool = False
+    api_key: str = ""  # If set, all mutation endpoints require this key
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -66,13 +69,24 @@ class Config:
             if provider == "anthropic"
             else os.getenv("OPENAI_API_KEY")
         )
+        db_url = os.getenv("DATABASE_URL", "")
+        redis_url = os.getenv("REDIS_URL", "")
         return cls(
             llm=LLMConfig(
                 provider=provider,
                 api_key=api_key,
                 base_url=os.getenv("LLM_BASE_URL"),
             ),
+            storage=StorageConfig(
+                db_url=db_url or "postgresql://localhost:5432/hvac",
+                redis_url=redis_url or "redis://localhost:6379/0",
+                use_db=bool(db_url),
+            ),
+            rl=RLConfig(
+                auto_train=os.getenv("RL_AUTO_TRAIN", "").lower() == "true",
+            ),
             debug=os.getenv("DEBUG", "").lower() == "true",
+            api_key=os.getenv("API_KEY", ""),
         )
 
 

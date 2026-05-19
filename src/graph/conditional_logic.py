@@ -53,6 +53,14 @@ def should_execute(state: AgentState) -> Literal["execute", "end"]:
     return "execute"
 
 
+def should_reoptimize(state: AgentState) -> Literal["strategy", "execute"]:
+    """If parameter agent detects oscillation or requires a new strategy, loop back."""
+    reopt_count = state.get("reoptimization_count", 0)
+    if state.get("needs_new_strategy") and reopt_count < 2:
+        return "strategy"
+    return "execute"
+
+
 def after_execute(state: AgentState) -> Literal["reflect", "end"]:
     """After execution, reflect or end."""
     return "end"

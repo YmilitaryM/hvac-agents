@@ -258,8 +258,9 @@ class ParameterAgent(BaseAgent):
     All core logic is in pure Python functions for testability.
     """
 
-    def __init__(self, llm=None, context=None):
+    def __init__(self, llm=None, context=None, pid_configs=None):
         super().__init__(name="parameter", llm=llm, context=context)
+        self.pid_configs = pid_configs or {}
 
     async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Apply parameter adjustments to target loads.

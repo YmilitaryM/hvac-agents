@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+import logging
 from typing import Any, Callable, Dict, List, Optional
 
 from langchain_anthropic import ChatAnthropic
@@ -28,6 +29,7 @@ class BaseAgent(ABC):
         self.name = name
         self.llm = llm
         self.context = context or AgentContext()
+        self.logger = logging.getLogger(f"hvac.agent.{name}")
 
     @abstractmethod
     async def run(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
