@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from common.db import create_engine, create_session_factory, Base
 
+from .seed import seed_equipment_types
 from .api import equipment, plants, templates
 
 
@@ -15,6 +16,7 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
+    await seed_equipment_types(app.state.session_factory)
     yield
     await engine.dispose()
 
