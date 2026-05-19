@@ -52,6 +52,8 @@ class EquipmentModel(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+    equipment_type: Mapped[EquipmentTypeModel] = relationship(foreign_keys=[equipment_type_id])
+    plant: Mapped[Optional[PlantModel]] = relationship(back_populates="equipment", foreign_keys=[plant_id])
     points: Mapped[list["EquipmentPointModel"]] = relationship(back_populates="equipment", cascade="all, delete-orphan")
 
 
@@ -64,6 +66,7 @@ class EquipmentPointModel(Base):
     current_value: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     last_updated: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     protocol_binding: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    point_template: Mapped[PointTemplateModel] = relationship(foreign_keys=[point_template_id])
     equipment: Mapped[EquipmentModel] = relationship(back_populates="points")
 
 
@@ -104,4 +107,6 @@ class PipeSegmentModel(Base):
     roughness_mm: Mapped[float] = mapped_column(Float, default=0.045)
     insulation_type: Mapped[str] = mapped_column(String(32), default="none")
     valve_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+    from_point: Mapped[EquipmentPointModel] = relationship(foreign_keys=[from_point_id])
+    to_point: Mapped[EquipmentPointModel] = relationship(foreign_keys=[to_point_id])
     loop: Mapped[LoopModel] = relationship(back_populates="pipe_segments")
