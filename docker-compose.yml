@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   postgres_asset:
     image: postgres:16-alpine
@@ -8,15 +7,25 @@ services:
       POSTGRES_PASSWORD: hvac_dev
     ports: ["5433:5432"]
     volumes: [pg_asset:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hvac -d asset_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   timescaledb:
-    image: timescale/timescaledb:latest-pg16
+    image: timescale/timescaledb:2.17.2-pg16
     environment:
       POSTGRES_DB: env_db
       POSTGRES_USER: hvac
       POSTGRES_PASSWORD: hvac_dev
     ports: ["5434:5432"]
     volumes: [tsdb:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hvac -d env_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   postgres_sim:
     image: postgres:16-alpine
@@ -26,6 +35,11 @@ services:
       POSTGRES_PASSWORD: hvac_dev
     ports: ["5435:5432"]
     volumes: [pg_sim:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hvac -d sim_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   postgres_agent:
     image: postgres:16-alpine
@@ -35,10 +49,20 @@ services:
       POSTGRES_PASSWORD: hvac_dev
     ports: ["5436:5432"]
     volumes: [pg_agent:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hvac -d agent_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   asset_service:
     build: services/asset
@@ -46,14 +70,20 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@postgres_asset:5432/asset_db
       REDIS_URL: redis://redis:6379/0
-    depends_on: [postgres_asset, redis]
+    depends_on:
+      postgres_asset:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   env_service:
     build: services/environment
     ports: ["8002:8000"]
     environment:
       DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@timescaledb:5432/env_db
-    depends_on: [timescaledb]
+    depends_on:
+      timescaledb:
+        condition: service_healthy
 
   sim_service:
     build: services/simulation
@@ -63,7 +93,11 @@ services:
       ASSET_SERVICE_URL: http://asset_service:8000
       ENV_SERVICE_URL: http://env_service:8000
       REDIS_URL: redis://redis:6379/0
-    depends_on: [postgres_sim, redis]
+    depends_on:
+      postgres_sim:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   agent_service:
     build: services/agent
@@ -72,7 +106,11 @@ services:
       DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@postgres_agent:5432/agent_db
       SIM_SERVICE_URL: http://sim_service:8000
       REDIS_URL: redis://redis:6379/0
-    depends_on: [postgres_agent, redis]
+    depends_on:
+      postgres_agent:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   gateway:
     build: services/gateway

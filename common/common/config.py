@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     sim_service_url: str = "http://localhost:8003"
     agent_service_url: str = "http://localhost:8004"
 
-    model_config = {"env_prefix": "HVAC_", "env_file": ".env"}
+    model_config = {"env_file": ".env"}
 
 
 _settings: Settings | None = None
