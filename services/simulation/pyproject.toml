@@ -1,0 +1,11 @@
+[project]
+name = "sim-service"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "hvac-common",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "httpx>=0.28",
+    "redis>=5.0",
+]
