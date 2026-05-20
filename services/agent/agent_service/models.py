@@ -48,7 +48,7 @@ class AlertModel(Base):
     device: Mapped[str] = mapped_column(String(50), default="")
     message: Mapped[str] = mapped_column(Text, default="")
     acknowledged: Mapped[bool] = mapped_column(Boolean, default=False)
-    metadata: Mapped[Optional[Dict]] = mapped_column(JSON, nullable=True)
+    extra_data: Mapped[Optional[Dict]] = mapped_column("metadata", JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     __table_args__ = (
