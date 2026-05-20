@@ -24,9 +24,11 @@ export default function EdgeDevices() {
   const [showConfig, setShowConfig] = useState(false);
   const [showOTA, setShowOTA] = useState(false);
 
-  const [regEdgeId, setRegEdgeId] = useState('');
+  const [regId, setRegId] = useState('');
+  const [regName, setRegName] = useState('');
   const [regPlantId, setRegPlantId] = useState('');
-  const [regMode, setRegMode] = useState('acquisition');
+  const [regMode, setRegMode] = useState('hybrid');
+  const [regVersion, setRegVersion] = useState('');
   const [configYaml, setConfigYaml] = useState('');
   const [otaVersion, setOtaVersion] = useState('');
 
@@ -46,7 +48,7 @@ export default function EdgeDevices() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['edges'] });
       setShowRegister(false);
-      setRegEdgeId(''); setRegPlantId(''); setRegMode('acquisition');
+      setRegId(''); setRegName(''); setRegPlantId(''); setRegMode('hybrid'); setRegVersion('');
     },
   });
 
@@ -177,27 +179,36 @@ export default function EdgeDevices() {
             <div className="space-y-3">
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Edge ID</label>
-                <input value={regEdgeId} onChange={e => setRegEdgeId(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+                <input value={regId} onChange={e => setRegId(e.target.value)} placeholder="e.g. edge-01" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Name</label>
+                <input value={regName} onChange={e => setRegName(e.target.value)} placeholder="e.g. Chiller Edge 1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Plant ID</label>
-                <input value={regPlantId} onChange={e => setRegPlantId(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+                <input value={regPlantId} onChange={e => setRegPlantId(e.target.value)} placeholder="e.g. plant-01" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Mode</label>
                 <select value={regMode} onChange={e => setRegMode(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200">
+                  <option value="hybrid">Hybrid</option>
                   <option value="acquisition">Acquisition</option>
                   <option value="control">Control</option>
                   <option value="inspection">Inspection</option>
                   <option value="full">Full</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Version</label>
+                <input value={regVersion} onChange={e => setRegVersion(e.target.value)} placeholder="e.g. 1.0.0" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+              </div>
             </div>
             <div className="flex justify-end gap-2 mt-6">
               <button onClick={() => setShowRegister(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Cancel</button>
               <button
-                onClick={() => registerMut.mutate({ edge_id: regEdgeId, plant_id: regPlantId, mode: regMode })}
-                disabled={registerMut.isPending || !regEdgeId || !regPlantId}
+                onClick={() => registerMut.mutate({ id: regId, name: regName, plant_id: regPlantId, mode: regMode, version: regVersion })}
+                disabled={registerMut.isPending || !regId || !regName || !regPlantId || !regVersion}
                 className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
               >
                 {registerMut.isPending ? 'Registering...' : 'Register'}

@@ -19,7 +19,7 @@ export async function fetchEdges(params?: { status?: string; search?: string }) 
   return r.json();
 }
 
-export async function registerEdge(body: { edge_id: string; plant_id: string; mode: string }) {
+export async function registerEdge(body: { id: string; name: string; plant_id: string; mode: string; version: string }) {
   const r = await fetch(`${BASE}/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
