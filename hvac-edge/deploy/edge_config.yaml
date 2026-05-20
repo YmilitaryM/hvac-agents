@@ -1,0 +1,28 @@
+edge_id: "edge-default"
+plant_id: "plant-default"
+mode: hybrid
+cloud_api_url: "http://192.168.1.100:8006"
+mqtt_broker_host: "192.168.1.100"
+mqtt_broker_port: 1883
+db_path: "/var/lib/hvac-edge/edge_data.duckdb"
+
+acquisition:
+  poll_interval_ms: 1000
+  protocols:
+    - type: modbus
+      port: /dev/ttyUSB0
+      baudrate: 19200
+      points: []
+
+control:
+  safety_gate: true
+  pid_enabled: true
+  interlock_enabled: true
+
+inspection:
+  plans_dir: "/etc/hvac-edge/plans"
+  default_interval_hours: 4
+
+ml:
+  onnx_model_path: "/etc/hvac-edge/models/anomaly_v1.onnx"
+  feature_window_hours: 24

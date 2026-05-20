@@ -1,0 +1,19 @@
+[Unit]
+Description=HVAC Edge Controller
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=hvac
+WorkingDirectory=/opt/hvac-edge
+ExecStart=/opt/hvac-edge/.venv/bin/python -m edge.main
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment=PYTHONUNBUFFERED=1
+Environment=EDGE_CONFIG_PATH=/etc/hvac-edge/edge_config.yaml
+
+[Install]
+WantedBy=multi-user.target

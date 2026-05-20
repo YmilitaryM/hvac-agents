@@ -1,5 +1,5 @@
 [project]
-name = "agent-service"
+name = "edgemanager-service"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
@@ -8,22 +8,15 @@ dependencies = [
     "uvicorn[standard]>=0.34",
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg>=0.30",
-    "redis>=5.0",
     "httpx>=0.28",
-    "pyyaml>=6.0",
-    "scikit-learn>=1.5",
-    "numpy>=1.26",
-    "skl2onnx>=1.17",
+    "aiomqtt>=2.0",
 ]
 
 [tool.uv.sources]
 hvac-common = { workspace = true }
 
 [dependency-groups]
-dev = [
-    "pytest>=9.0",
-    "pytest-asyncio>=1.0",
-]
+dev = ["pytest-asyncio>=1.0", "aiosqlite>=0.20"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
