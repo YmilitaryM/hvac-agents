@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import EdgeDevices from './pages/EdgeDevices';
 import WorkOrders from './pages/WorkOrders';
+import Maintenance from './pages/Maintenance';
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/edges" element={<EdgeDevices />} />
             <Route path="/workorders" element={<WorkOrders />} />
+            <Route path="/maintenance" element={<Maintenance />} />
           </Route>
         </Routes>
       </BrowserRouter>
