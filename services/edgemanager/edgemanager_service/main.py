@@ -7,9 +7,7 @@ from common.db import create_engine, create_session_factory
 from common.metrics import MetricsMiddleware, metrics_endpoint
 from .models import Base
 
-from .api import registry, heartbeat, config, ota
-# TODO: Wire up remaining API routers once modules are created in future tasks.
-# from .api import data
+from .api import registry, heartbeat, config, ota, data
 
 
 @asynccontextmanager
@@ -33,8 +31,7 @@ app.add_middleware(MetricsMiddleware, service_name="edgemanager")
 app.include_router(registry.router, prefix="/api/edges", tags=["Registry"])
 app.include_router(heartbeat.router, prefix="/api/edges", tags=["Heartbeat"])
 app.include_router(config.router, prefix="/api/edges", tags=["Config"])
-# TODO: Wire up remaining API routers once modules are created in future tasks.
-# app.include_router(data.router, prefix="/api/edges", tags=["Data"])
+app.include_router(data.router, prefix="/api/edges", tags=["Data"])
 app.include_router(ota.router, prefix="/api/edges", tags=["OTA"])
 
 
