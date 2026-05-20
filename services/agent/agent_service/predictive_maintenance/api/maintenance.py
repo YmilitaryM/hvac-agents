@@ -3,6 +3,8 @@ from pydantic import BaseModel
 
 from ..degradation_tracker import DegradationTracker
 from ..failure_predictor import FailurePredictor, build_training_data
+from ..rule_advisor import advise
+from ..maintenance_scheduler import recommend_window
 
 router = APIRouter()
 
@@ -45,6 +47,8 @@ async def evaluate_degradation(body: DegradationRequest):
         vibration_window=body.vibration_window,
     )
     result["edge_id"] = body.edge_id
+    result["rule_recommendations"] = advise(result)
+    result["schedule"] = recommend_window(result.get("severity", "degrading"))
     return result
 
 

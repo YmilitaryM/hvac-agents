@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import WorkOrder, WorkOrderLog
 from ..lifecycle import transition as do_transition
+from ..assignment import assign_work_order
+from ..auto_generator import generate_from_anomaly, generate_from_degradation
 
 router = APIRouter()
 
@@ -16,6 +18,8 @@ class CreateWorkOrderRequest(BaseModel):
     title: str
     description: str | None = None
     source: str = "auto"
+    equipment_type: str | None = None
+    assigned_to: str | None = None
 
 
 class TransitionRequest(BaseModel):
@@ -32,6 +36,10 @@ async def get_db(request: Request) -> AsyncSession:
 
 @router.post("/", status_code=201)
 async def create_work_order(body: CreateWorkOrderRequest, session: AsyncSession = Depends(get_db)):
+    assigned_to = body.assigned_to
+    if not assigned_to and body.equipment_type:
+        assigned_to = assign_work_order(body.equipment_type, body.severity)
+
     wo = WorkOrder(
         edge_id=body.edge_id,
         equipment_id=body.equipment_id,
@@ -39,6 +47,7 @@ async def create_work_order(body: CreateWorkOrderRequest, session: AsyncSession 
         title=body.title,
         description=body.description,
         source=body.source,
+        assigned_to=assigned_to,
     )
     session.add(wo)
     await session.commit()
@@ -85,6 +94,31 @@ async def transition_work_order(wo_id: int, body: TransitionRequest, session: As
         note=log_data["note"],
     )
     session.add(log)
+    await session.commit()
+    await session.refresh(wo)
+    return _to_dict(wo)
+
+
+class AutoGenerateRequest(BaseModel):
+    edge_id: str
+    equipment_id: str
+    equipment_type: str
+    severity: str
+    detail: str
+    check_id: str | None = None
+    generate_type: str = "anomaly"  # "anomaly" or "degradation"
+
+
+@router.post("/generate", status_code=201)
+async def auto_generate_work_order(body: AutoGenerateRequest, session: AsyncSession = Depends(get_db)):
+    if body.generate_type == "degradation":
+        wo = generate_from_degradation(body.edge_id, body.equipment_id, body.severity, body.detail)
+    else:
+        wo = generate_from_anomaly(body.edge_id, body.equipment_id, body.severity,
+                                   body.check_id or "unknown", body.detail)
+    assigned_to = assign_work_order(body.equipment_type, body.severity)
+    wo.assigned_to = assigned_to
+    session.add(wo)
     await session.commit()
     await session.refresh(wo)
     return _to_dict(wo)
