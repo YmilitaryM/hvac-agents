@@ -16,7 +16,7 @@ class ModbusAdapter(ProtocolAdapter):
             self._client = None
         host = binding.config.get("host", "127.0.0.1")
         port = binding.config.get("port", 502)
-        self._client = AsyncModbusTcpClient(host, port, timeout=5)
+        self._client = AsyncModbusTcpClient(host, port=port, timeout=5)
         connected = await self._client.connect()
         if not connected:
             raise CommunicationError(f"Modbus connect failed: {host}:{port}")
@@ -74,5 +74,8 @@ class ModbusAdapter(ProtocolAdapter):
 
     async def disconnect(self) -> None:
         if self._client:
-            self._client.close()
+            try:
+                self._client.close()
+            except TypeError:
+                pass  # pymodbus 3.x: close() fails if transport never created
             self._client = None
