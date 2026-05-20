@@ -8,6 +8,7 @@ from common.metrics import MetricsMiddleware, metrics_endpoint
 
 from .api import monitoring, strategies, reports, alerts, prediction, benchmarking, rl, dispatch, carbon
 from .predictive_maintenance.api.maintenance import router as maintenance_router
+from .workorder.api.workorders import router as workorder_router
 from .api import override as _override
 from . import models  # ensure models are imported for create_all
 
@@ -49,6 +50,8 @@ app.include_router(carbon.router, prefix="/api", tags=["Carbon"])
 app.include_router(_override.router, prefix="/api", tags=["Override"])
 
 app.include_router(maintenance_router, prefix="/api/maintenance", tags=["Maintenance"])
+
+app.include_router(workorder_router, prefix="/api/workorders", tags=["WorkOrders"])
 
 
 @app.get("/health")

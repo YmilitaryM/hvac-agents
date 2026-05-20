@@ -22,4 +22,8 @@ hvac-common = { workspace = true }
 [dependency-groups]
 dev = [
     "pytest>=9.0",
+    "pytest-asyncio>=1.0",
 ]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
