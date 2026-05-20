@@ -1,0 +1,40 @@
+# hvac-edge/edge/templates/default_inspection.yaml
+plan_id: default-daily
+description: Daily chiller plant inspection checklist
+interval_hours: 4
+items:
+  - id: chk-chiller-cop
+    equipment_type: chiller
+    check: cop_degradation
+    params:
+      threshold_pct: 10
+    severity: warning
+
+  - id: chk-chiller-approach
+    equipment_type: chiller
+    check: approach_temp
+    params:
+      max_delta_k: 3.0
+    severity: warning
+
+  - id: chk-tower-approach
+    equipment_type: cooling_tower
+    check: approach_temp
+    params:
+      max_delta_k: 5.0
+    severity: warning
+
+  - id: chk-pump-vibration
+    equipment_type: pump
+    check: vibration_rms
+    params:
+      max_rms: 7.0
+    severity: critical
+
+  - id: chk-valve-stuck
+    equipment_type: valve
+    check: stuck_detection
+    params:
+      min_position_change: 0.02
+      window_minutes: 30
+    severity: warning
