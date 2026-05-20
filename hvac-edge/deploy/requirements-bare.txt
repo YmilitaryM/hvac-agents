@@ -1,0 +1,10 @@
+# hvac-edge/deploy/requirements-bare.txt
+# Minimal dependencies for bare-metal edge deployment
+duckdb>=1.1
+pydantic>=2.0
+pyyaml>=6.0
+aiomqtt>=2.0
+httpx>=0.28
+pymodbus>=3.7
+BAC0>=23.0
+asyncua>=1.0
