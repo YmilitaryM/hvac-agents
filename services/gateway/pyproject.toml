@@ -11,3 +11,6 @@ dependencies = [
     "httpx>=0.28",
     "passlib[bcrypt]>=1.7",
 ]
+
+[tool.uv.sources]
+hvac-common = { workspace = true }

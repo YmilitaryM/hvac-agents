@@ -9,3 +9,6 @@ dependencies = [
     "httpx>=0.28",
     "redis>=5.0",
 ]
+
+[tool.uv.sources]
+hvac-common = { workspace = true }

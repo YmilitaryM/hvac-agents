@@ -79,7 +79,9 @@ services:
       retries: 5
 
   acquisition_service:
-    build: services/acquisition
+    build:
+      context: .
+      dockerfile: services/acquisition/Dockerfile
     ports: ["8005:8000"]
     environment:
       DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@timescaledb_acq:5432/acq_db
@@ -92,7 +94,9 @@ services:
         condition: service_healthy
 
   asset_service:
-    build: services/asset
+    build:
+      context: .
+      dockerfile: services/asset/Dockerfile
     ports: ["8001:8000"]
     environment:
       DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@postgres_asset:5432/asset_db
@@ -104,7 +108,9 @@ services:
         condition: service_healthy
 
   env_service:
-    build: services/environment
+    build:
+      context: .
+      dockerfile: services/environment/Dockerfile
     ports: ["8002:8000"]
     environment:
       DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@timescaledb:5432/env_db
@@ -113,7 +119,9 @@ services:
         condition: service_healthy
 
   sim_service:
-    build: services/simulation
+    build:
+      context: .
+      dockerfile: services/simulation/Dockerfile
     ports: ["8003:8000"]
     environment:
       DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@postgres_sim:5432/sim_db
@@ -127,7 +135,9 @@ services:
         condition: service_healthy
 
   agent_service:
-    build: services/agent
+    build:
+      context: .
+      dockerfile: services/agent/Dockerfile
     ports: ["8004:8000"]
     environment:
       DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@postgres_agent:5432/agent_db
@@ -140,7 +150,9 @@ services:
         condition: service_healthy
 
   gateway:
-    build: services/gateway
+    build:
+      context: .
+      dockerfile: services/gateway/Dockerfile
     ports: ["8000:8000"]
     environment:
       ASSET_SERVICE_URL: http://asset_service:8000

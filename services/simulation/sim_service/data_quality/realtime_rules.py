@@ -11,6 +11,7 @@ class QualityEvent:
     value: float | None
     threshold: float | None
     timestamp: datetime | None = None
+    metadata: dict | None = None
 
 
 class RealtimeRules:

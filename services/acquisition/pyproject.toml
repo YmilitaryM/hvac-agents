@@ -10,8 +10,11 @@ dependencies = [
     "redis>=5.0",
     "pymodbus>=3.7",
     "BAC0>=23.0",
-    "opcua-asyncio>=1.0",
+    "asyncua>=1.0",
     "sqlalchemy[asyncio]>=2.0",
     "asyncpg>=0.30",
     "psycopg2-binary>=2.9",
 ]
+
+[tool.uv.sources]
+hvac-common = { workspace = true }
