@@ -12,6 +12,7 @@ import Alerts from './pages/Alerts';
 import ManualOverride from './pages/ManualOverride';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import EdgeDevices from './pages/EdgeDevices';
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="/override" element={<ManualOverride />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/edges" element={<EdgeDevices />} />
           </Route>
         </Routes>
       </BrowserRouter>
