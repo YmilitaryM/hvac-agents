@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from common.db import create_engine, create_session_factory, Base
+from common.metrics import MetricsMiddleware, metrics_endpoint
 
 from .api import weather, pricing, buildings
 
@@ -32,6 +33,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Environment Service", version="0.1.0", lifespan=lifespan)
 
+app.add_middleware(MetricsMiddleware, service_name="environment")
+
 app.include_router(weather.router, prefix="/api/env", tags=["Weather"])
 app.include_router(pricing.router, prefix="/api/env", tags=["Pricing"])
 app.include_router(buildings.router, prefix="/api/env", tags=["Buildings"])
@@ -40,3 +43,6 @@ app.include_router(buildings.router, prefix="/api/env", tags=["Buildings"])
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "environment"}
+
+
+@app.get("/metrics")(metrics_endpoint)

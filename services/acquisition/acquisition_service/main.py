@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from common.config import get_settings
 from common.db import create_engine, create_session_factory, Base
+from common.metrics import MetricsMiddleware, metrics_endpoint
 from .models import create_hypertable
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Data Acquisition Service", version="0.1.0", lifespan=lifespan)
 
+app.add_middleware(MetricsMiddleware, service_name="acquisition")
+
 # Will be added in future tasks:
 # app.include_router(points.router, prefix="/api/acquisition", tags=["Points"])
 # app.include_router(status.router, prefix="/api/acquisition", tags=["Status"])
@@ -57,3 +60,6 @@ app = FastAPI(title="Data Acquisition Service", version="0.1.0", lifespan=lifesp
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "acquisition"}
+
+
+@app.get("/metrics")(metrics_endpoint)
