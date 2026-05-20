@@ -16,6 +16,7 @@ SERVICE_ROUTES = {
     "/api/prediction": "agent",
     "/api/benchmarking": "agent",
     "/api/rl": "agent",
+    "/api/acquisition": "acquisition",
 }
 
 SERVICE_URLS = {}

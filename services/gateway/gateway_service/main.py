@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
         "environment": s.env_service_url,
         "simulation": s.sim_service_url,
         "agent": s.agent_service_url,
+        "acquisition": s.acquisition_service_url,
     })
     yield
     await engine.dispose()

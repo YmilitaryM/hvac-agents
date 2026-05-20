@@ -64,6 +64,33 @@ services:
       timeout: 5s
       retries: 5
 
+  timescaledb_acq:
+    image: timescale/timescaledb:2.17.2-pg16
+    environment:
+      POSTGRES_DB: acq_db
+      POSTGRES_USER: hvac
+      POSTGRES_PASSWORD: hvac_dev
+    ports: ["5438:5432"]
+    volumes: [tsdb_acq:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hvac -d acq_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  acquisition_service:
+    build: services/acquisition
+    ports: ["8005:8000"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@timescaledb_acq:5432/acq_db
+      ASSET_SERVICE_URL: http://asset_service:8000
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      timescaledb_acq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   asset_service:
     build: services/asset
     ports: ["8001:8000"]
@@ -120,11 +147,13 @@ services:
       ENV_SERVICE_URL: http://env_service:8000
       SIM_SERVICE_URL: http://sim_service:8000
       AGENT_SERVICE_URL: http://agent_service:8000
+      ACQUISITION_SERVICE_URL: http://acquisition_service:8000
       JWT_SECRET: dev-secret-change-in-prod
-    depends_on: [asset_service, env_service, sim_service, agent_service]
+    depends_on: [asset_service, env_service, sim_service, agent_service, acquisition_service]
 
 volumes:
   pg_asset: ~
   tsdb: ~
   pg_sim: ~
   pg_agent: ~
+  tsdb_acq: ~

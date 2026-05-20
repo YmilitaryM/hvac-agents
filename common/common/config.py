@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     env_service_url: str = "http://localhost:8002"
     sim_service_url: str = "http://localhost:8003"
     agent_service_url: str = "http://localhost:8004"
+    acquisition_service_url: str = "http://localhost:8005"
+    acq_database_url: str = "postgresql+asyncpg://hvac:hvac_dev@localhost:5438/acq_db"
 
     model_config = {"env_file": ".env"}
 
