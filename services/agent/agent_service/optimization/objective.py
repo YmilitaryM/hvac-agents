@@ -61,6 +61,27 @@ def compute_wear_cost(
     return total
 
 
+def compute_water_cost(
+    total_power_kw: float,
+    water_price_per_m3: float = 3.5,
+    water_usage_rate: float = 0.008,  # m3 per kW of heat rejected
+    duration_hours: float = 1.0,
+) -> float:
+    """Compute cooling tower water consumption cost in yuan.
+
+    Args:
+        total_power_kw: Total system power in kW
+        water_price_per_m3: Water price in yuan per m3
+        water_usage_rate: Water consumption rate (m3 per kW rejected)
+        duration_hours: Time duration in hours
+    """
+    if total_power_kw <= 0:
+        return 0.0
+    heat_rejected_kw = total_power_kw * 1.15  # ~15% more heat than power
+    water_m3 = heat_rejected_kw * water_usage_rate * duration_hours
+    return water_m3 * water_price_per_m3
+
+
 def total_objective(
     energy_cost: float,
     carbon_cost: float,
@@ -68,9 +89,17 @@ def total_objective(
     w_energy: float = 1.0,
     w_carbon: float = 1.0,
     w_wear: float = 1.0,
+    water_cost: float = 0.0,
+    w_water: float = 1.0,
 ) -> float:
     """Compute weighted total objective.
 
-    total = w_energy * energy_cost + w_carbon * carbon_cost + w_wear * wear_cost
+    total = w_energy * energy_cost + w_carbon * carbon_cost
+          + w_wear * wear_cost + w_water * water_cost
     """
-    return w_energy * energy_cost + w_carbon * carbon_cost + w_wear * wear_cost
+    return (
+        w_energy * energy_cost
+        + w_carbon * carbon_cost
+        + w_wear * wear_cost
+        + w_water * water_cost
+    )
