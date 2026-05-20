@@ -13,4 +13,5 @@ COPY --from=builder /app/.venv /app/.venv
 COPY common common/
 COPY services/edgemanager services/edgemanager/
 ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH="/app/services/edgemanager"
 CMD ["uvicorn", "edgemanager_service.main:app", "--host", "0.0.0.0", "--port", "8000"]

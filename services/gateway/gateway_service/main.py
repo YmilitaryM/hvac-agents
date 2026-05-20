@@ -30,6 +30,7 @@ async def lifespan(app: FastAPI):
         "simulation": s.sim_service_url,
         "agent": s.agent_service_url,
         "acquisition": s.acquisition_service_url,
+        "edgemanager": s.edgemanager_service_url,
     })
     yield
     await engine.dispose()
@@ -62,7 +63,9 @@ async def health():
     return {"status": "healthy", "service": "gateway"}
 
 
-@app.get("/metrics")(metrics_endpoint)
+@app.get("/metrics")
+async def get_metrics():
+    return metrics_endpoint()
 
 
 @app.websocket("/ws/monitor")

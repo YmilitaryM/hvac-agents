@@ -24,6 +24,9 @@ SERVICE_ROUTES = {
     "/api/rl": "agent",
     "/api/acquisition": "acquisition",
     "/api/override": "agent",
+    "/api/edges": "edgemanager",
+    "/api/workorders": "agent",
+    "/api/maintenance": "agent",
 }
 
 SERVICE_URLS = {}

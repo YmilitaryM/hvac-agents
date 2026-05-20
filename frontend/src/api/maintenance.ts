@@ -1,11 +1,13 @@
 const BASE = '/api/maintenance';
 
 export interface DegradationRequest {
+  edge_id: string;
   equipment_id: string;
-  design_cop: number;
+  equipment_type: string;
+  design_cop?: number;
   cop_window: number[];
-  approach_temp_avg: number;
-  vibration_window: number[];
+  approach_temp_avg?: number;
+  vibration_window?: number[];
 }
 
 export interface DegradationResult {
@@ -16,7 +18,7 @@ export interface DegradationResult {
 }
 
 export interface PredictRequest {
-  current_cop: number;
+  cop_current: number;
   vibration_rms: number;
   approach_temp: number;
 }

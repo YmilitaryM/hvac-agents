@@ -4,7 +4,9 @@ import KpiCard from '../components/KpiCard';
 import { evaluateDegradation, predictFailure, type DegradationResult, type PredictResult } from '../api/maintenance';
 
 export default function Maintenance() {
+  const [edgeId, setEdgeId] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
+  const [equipmentType, setEquipmentType] = useState('chiller');
   const [designCop, setDesignCop] = useState('5.5');
   const [copWindow, setCopWindow] = useState('5.2,5.1,5.0,4.9,4.8');
   const [approachTempAvg, setApproachTempAvg] = useState('2.5');
@@ -74,7 +76,9 @@ export default function Maintenance() {
             </div>
             <button
               onClick={() => evalMut.mutate({
+                edge_id: edgeId || 'edge-01',
                 equipment_id: equipmentId || 'chiller-1',
+                equipment_type: equipmentType,
                 design_cop: parseFloat(designCop) || 5.5,
                 cop_window: copWindow.split(',').map(Number),
                 approach_temp_avg: parseFloat(approachTempAvg) || 2.5,
@@ -125,7 +129,7 @@ export default function Maintenance() {
             </div>
             <button
               onClick={() => predMut.mutate({
-                current_cop: parseFloat(predCop) || 4.5,
+                cop_current: parseFloat(predCop) || 4.5,
                 vibration_rms: parseFloat(predVib) || 2.5,
                 approach_temp: parseFloat(predApproach) || 3.2,
               })}
