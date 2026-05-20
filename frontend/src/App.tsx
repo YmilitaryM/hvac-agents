@@ -13,6 +13,7 @@ import ManualOverride from './pages/ManualOverride';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import EdgeDevices from './pages/EdgeDevices';
+import WorkOrders from './pages/WorkOrders';
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/edges" element={<EdgeDevices />} />
+            <Route path="/workorders" element={<WorkOrders />} />
           </Route>
         </Routes>
       </BrowserRouter>
