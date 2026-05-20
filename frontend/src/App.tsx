@@ -38,6 +38,12 @@ export default function App() {
             <Route path="/edges" element={<EdgeDevices />} />
             <Route path="/workorders" element={<WorkOrders />} />
             <Route path="/maintenance" element={<Maintenance />} />
+            <Route path="*" element={
+              <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400">
+                <h2 className="text-4xl font-bold text-slate-500 mb-2">404</h2>
+                <p>Page not found</p>
+              </div>
+            } />
           </Route>
         </Routes>
       </BrowserRouter>

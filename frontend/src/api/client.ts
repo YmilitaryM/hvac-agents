@@ -8,4 +8,11 @@ async function apiFetch(url: string, opts?: RequestInit) {
   return r.json();
 }
 
-export { apiFetch };
+const apiClient = {
+  get: (url: string) => apiFetch(url),
+  post: (url: string, body?: unknown) => apiFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }),
+  put: (url: string, body?: unknown) => apiFetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined }),
+  delete: (url: string) => apiFetch(url, { method: 'DELETE' }),
+};
+
+export { apiFetch, apiClient };
