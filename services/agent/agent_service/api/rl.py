@@ -106,3 +106,77 @@ async def list_checkpoints():
         return {"checkpoints": files, "model_dir": model_dir}
     except Exception:
         return {"checkpoints": [], "model_dir": model_dir}
+
+
+# --- MAPPO multi-agent endpoints ---
+
+_mappo_controller: object = None
+
+
+def get_mappo_controller():
+    global _mappo_controller
+    if _mappo_controller is not None:
+        return _mappo_controller
+    try:
+        from ..rl.multi_agent.mappo import HAS_TORCH, MultiAgentController
+        if HAS_TORCH:
+            _mappo_controller = MultiAgentController({})
+        else:
+            _mappo_controller = MultiAgentController({})
+    except Exception:
+        _mappo_controller = None
+    return _mappo_controller
+
+
+class MAPPOInferenceRequest(BaseModel):
+    observations: dict[str, list[float]]
+    device_configs: dict[str, dict] = {}
+    action_masks: dict[str, list[float]] | None = None
+
+
+class MAPPOValuesRequest(BaseModel):
+    observations: dict[str, list[float]]
+
+
+@router.post("/mappo/actions")
+async def mappo_get_actions(data: MAPPOInferenceRequest):
+    """Get MAPPO actions for multiple devices."""
+    import numpy as np
+
+    controller = get_mappo_controller()
+    if controller is None or not hasattr(controller, "get_actions"):
+        return {"actions": {}, "status": "mappo_unavailable"}
+
+    observations = {
+        did: np.array(obs, dtype=np.float32)
+        for did, obs in data.observations.items()
+    }
+    action_masks = None
+    if data.action_masks:
+        action_masks = {
+            did: np.array(mask, dtype=np.float32)
+            for did, mask in data.action_masks.items()
+        }
+
+    actions = controller.get_actions(observations, action_masks)
+    return {
+        "actions": {did: act.tolist() for did, act in actions.items()},
+        "status": "ok",
+    }
+
+
+@router.post("/mappo/values")
+async def mappo_get_values(data: MAPPOValuesRequest):
+    """Get value function estimates for multi-agent observations."""
+    import numpy as np
+
+    controller = get_mappo_controller()
+    if controller is None or not hasattr(controller, "get_values"):
+        return {"values": {}, "status": "mappo_unavailable"}
+
+    observations = {
+        did: np.array(obs, dtype=np.float32)
+        for did, obs in data.observations.items()
+    }
+    values = controller.get_values(observations)
+    return {"values": values, "status": "ok"}

@@ -5,7 +5,7 @@ from fastapi import FastAPI
 
 from common.db import create_engine, create_session_factory, Base
 
-from .api import monitoring, strategies, reports, alerts, prediction, benchmarking, rl
+from .api import monitoring, strategies, reports, alerts, prediction, benchmarking, rl, dispatch, carbon
 from . import models  # ensure models are imported for create_all
 
 
@@ -38,6 +38,8 @@ app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
 app.include_router(prediction.router, prefix="/api/prediction", tags=["Prediction"])
 app.include_router(benchmarking.router, prefix="/api/benchmarking", tags=["Benchmarking"])
 app.include_router(rl.router, prefix="/api/rl", tags=["RL"])
+app.include_router(dispatch.router, prefix="/api", tags=["Dispatch"])
+app.include_router(carbon.router, prefix="/api", tags=["Carbon"])
 
 
 @app.get("/health")
