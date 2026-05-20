@@ -4,6 +4,7 @@ import redis.asyncio as aioredis
 from fastapi import FastAPI
 
 from .api import simulation, faults, whatif, rl_env
+from .api import calibration as _calibration  # noqa: F401
 from .faults import injector as _fault_injector  # noqa: F401 — ensure module is loaded
 
 
@@ -29,6 +30,7 @@ app.include_router(simulation.router, prefix="/api/simulation", tags=["Simulatio
 app.include_router(whatif.router, prefix="/api/simulation", tags=["What-If"])
 app.include_router(faults.router, prefix="/api/faults", tags=["Faults"])
 app.include_router(rl_env.router, prefix="/api/simulation", tags=["RL Environment"])
+app.include_router(_calibration.router, prefix="/api/simulation", tags=["Calibration"])
 
 
 @app.get("/health")
