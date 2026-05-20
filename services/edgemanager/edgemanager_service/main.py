@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from common.config import get_settings
 from common.db import create_engine, create_session_factory
+from common.metrics import MetricsMiddleware, metrics_endpoint
 from .models import Base
 
 # TODO: Wire up API routers once modules are created in future tasks.
@@ -26,6 +27,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Edge Manager Service", version="0.1.0", lifespan=lifespan)
+app.add_middleware(MetricsMiddleware, service_name="edgemanager")
 
 # TODO: Wire up API routers once modules are created in future tasks.
 # app.include_router(registry.router, prefix="/api/edges", tags=["Registry"])
@@ -38,3 +40,6 @@ app = FastAPI(title="Edge Manager Service", version="0.1.0", lifespan=lifespan)
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "edgemanager"}
+
+
+@app.get("/metrics")(metrics_endpoint)
