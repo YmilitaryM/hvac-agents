@@ -109,8 +109,24 @@ Predictive maintenance dashboard: evaluate equipment degradation, predict failur
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/maintenance/evaluate` | POST | Run degradation evaluation |
+| `/api/maintenance/evaluate` | POST | Run degradation evaluation, returns rule_recommendations + schedule |
 | `/api/maintenance/predict` | POST | Predict failure probability |
+
+### Backend modules (added post-design, PR #1)
+
+| Module | Purpose |
+|--------|---------|
+| `rule_advisor.py` | Rule engine: 5 static threshold rules for maintenance action recommendations |
+| `maintenance_scheduler.py` | Suggests maintenance time windows by severity |
+| `auto_generator.py` | Generates WorkOrder objects from anomaly/detection data |
+| `assignment.py` | Maps equipment_type → role for auto-assignment |
+
+### New endpoints (added post-design)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/workorders/generate` | POST | Auto-generate work order from anomaly/degradation with auto-assignment |
+| `/api/workorders/` POST | - | Now accepts optional `equipment_type` for auto role assignment |
 
 ### UI components
 
@@ -193,7 +209,36 @@ All API calls go through the gateway (:8000) which proxies to edgemanager (:8006
 
 ---
 
-## 8. Self-Check
+## 8. Known Limitations & Pending Work
+
+### 8.1 工单人员分配 (Work Order Assignment)
+**当前状态：** `assignment.py` 使用硬编码的设备类型→角色映射表，不是真实人员。
+- chiller / cooling_tower → `hvac-technician`
+- pump / valve → `mechanic`
+- sensor → `instrumentation-tech`
+- 严重级别加 `-lead` 后缀
+
+**待实现：**
+- 技术人员表 (id, name, role, skills, shift, available)
+- 按设备类型+技能匹配找到可用技术人员
+- 排班和负载均衡
+- 对接 auth 模块的用户系统
+
+### 8.2 维护规则引擎 (Rule Advisor)
+**当前状态：** `rule_advisor.py` 内置 5 条静态阈值规则，规则硬编码不可配置。
+**待实现：** 规则应支持通过 API 动态管理（CRUD），或至少从配置文件加载。
+
+### 8.3 维护调度窗口 (Maintenance Scheduler)
+**当前状态：** `maintenance_scheduler.py` 按严重程度给固定时间窗口（严重:4h/2d, 退化:3d/14d, 其他:7d/30d）。
+**待实现：** 结合日历、人员空闲时间、备件库存等实际约束。
+
+### 8.4 工单自动生成 (Auto Generator)
+**当前状态：** `auto_generator.py` 通过 `/api/workorders/generate` 端点手动调用。
+**待实现：** 应作为维护评估的自动后续动作 — 当 degradation 达到 critical 时自动创建工单。
+
+---
+
+## 9. Self-Check
 
 - [ ] No TBD/TODO placeholders
 - [ ] All API endpoints match existing backend routes
