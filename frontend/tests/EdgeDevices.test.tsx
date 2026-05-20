@@ -36,7 +36,7 @@ describe('EdgeDevices page', () => {
       json: () => Promise.resolve(mockEdges),
     } as Response);
     renderPage();
-    expect(screen.getByText('Edge Devices')).toBeDefined();
+    expect(screen.getByText('边缘设备')).toBeDefined();
   });
 
   it('renders stats cards with counts', async () => {
@@ -45,12 +45,11 @@ describe('EdgeDevices page', () => {
       json: () => Promise.resolve(mockEdges),
     } as Response);
     renderPage();
-    // Use getAllByText because labels also appear in <select> options and status badges
-    await screen.findByText('Edge Devices');
-    expect(screen.getAllByText('Online').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Offline').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Warning').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Total')).toBeDefined();
+    await screen.findByText('边缘设备');
+    expect(screen.getAllByText('在线').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('离线').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('告警').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('总计')).toBeDefined();
   });
 
   it('renders device table with edge IDs', async () => {

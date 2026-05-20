@@ -34,6 +34,12 @@ export default function Maintenance() {
     return 'bg-red-500';
   };
 
+  const severityLabel = (s: string) => {
+    if (s === 'healthy') return '健康';
+    if (s === 'degrading') return '退化中';
+    return '严重';
+  };
+
   const probGaugeColor = (p: number) => {
     if (p < 0.3) return 'text-green-400';
     if (p < 0.7) return 'text-yellow-400';
@@ -42,36 +48,36 @@ export default function Maintenance() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">Predictive Maintenance</h2>
+      <h2 className="text-xl font-bold mb-4">预测维护</h2>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <KpiCard label="Healthy" value="--" color="text-green-400" />
-        <KpiCard label="Degrading" value="--" color="text-yellow-400" />
-        <KpiCard label="Critical" value="--" color="text-red-400" />
+        <KpiCard label="健康" value="--" color="text-green-400" />
+        <KpiCard label="退化中" value="--" color="text-yellow-400" />
+        <KpiCard label="严重" value="--" color="text-red-400" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
-          <h3 className="text-sm text-slate-400 uppercase mb-4">Degradation Evaluation</h3>
+          <h3 className="text-sm text-slate-400 uppercase mb-4">退化评估</h3>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Equipment ID</label>
-              <input value={equipmentId} onChange={e => setEquipmentId(e.target.value)} placeholder="e.g. chiller-1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+              <label className="block text-xs text-slate-400 mb-1">设备ID</label>
+              <input value={equipmentId} onChange={e => setEquipmentId(e.target.value)} placeholder="例如 chiller-1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Design COP</label>
+              <label className="block text-xs text-slate-400 mb-1">设计COP</label>
               <input value={designCop} onChange={e => setDesignCop(e.target.value)} type="number" step="0.1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">COP Window (comma-separated)</label>
+              <label className="block text-xs text-slate-400 mb-1">COP窗口 (逗号分隔)</label>
               <input value={copWindow} onChange={e => setCopWindow(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Approach Temp Avg (°C)</label>
+              <label className="block text-xs text-slate-400 mb-1">趋近温度均值 (°C)</label>
               <input value={approachTempAvg} onChange={e => setApproachTempAvg(e.target.value)} type="number" step="0.1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Vibration Window (comma-separated)</label>
+              <label className="block text-xs text-slate-400 mb-1">振动窗口 (逗号分隔)</label>
               <input value={vibrationWindow} onChange={e => setVibrationWindow(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <button
@@ -87,7 +93,7 @@ export default function Maintenance() {
               disabled={evalMut.isPending}
               className="w-full bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
             >
-              {evalMut.isPending ? 'Evaluating...' : 'Run Evaluation'}
+              {evalMut.isPending ? '评估中...' : '运行评估'}
             </button>
           </div>
 
@@ -99,11 +105,11 @@ export default function Maintenance() {
             <div className="mt-4 bg-slate-700/50 rounded p-4 space-y-2">
               <div className="flex items-center gap-2">
                 <span className={`w-3 h-3 rounded-full ${severityColor(evalResult.severity)}`} />
-                <span className="font-semibold capitalize">{evalResult.severity}</span>
+                <span className="font-semibold">{severityLabel(evalResult.severity)}</span>
               </div>
               <div className="text-sm text-slate-300 grid grid-cols-2 gap-2">
-                <div>COP Degradation: <span className="text-white">{evalResult.cop_degradation_pct.toFixed(1)}%</span></div>
-                <div>CUSUM Triggered: <span className={evalResult.cusum_triggered ? 'text-red-400' : 'text-green-400'}>{evalResult.cusum_triggered ? 'Yes' : 'No'}</span></div>
+                <div>COP退化率: <span className="text-white">{evalResult.cop_degradation_pct.toFixed(1)}%</span></div>
+                <div>CUSUM触发: <span className={evalResult.cusum_triggered ? 'text-red-400' : 'text-green-400'}>{evalResult.cusum_triggered ? '是' : '否'}</span></div>
               </div>
               {evalResult.recommended_action && (
                 <div className="text-sm bg-slate-800 rounded p-2 text-slate-300">{evalResult.recommended_action}</div>
@@ -113,18 +119,18 @@ export default function Maintenance() {
         </div>
 
         <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
-          <h3 className="text-sm text-slate-400 uppercase mb-4">Failure Prediction</h3>
+          <h3 className="text-sm text-slate-400 uppercase mb-4">故障预测</h3>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Current COP</label>
+              <label className="block text-xs text-slate-400 mb-1">当前COP</label>
               <input value={predCop} onChange={e => setPredCop(e.target.value)} type="number" step="0.1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Vibration RMS</label>
+              <label className="block text-xs text-slate-400 mb-1">振动RMS</label>
               <input value={predVib} onChange={e => setPredVib(e.target.value)} type="number" step="0.1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Approach Temp (°C)</label>
+              <label className="block text-xs text-slate-400 mb-1">趋近温度 (°C)</label>
               <input value={predApproach} onChange={e => setPredApproach(e.target.value)} type="number" step="0.1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <button
@@ -136,7 +142,7 @@ export default function Maintenance() {
               disabled={predMut.isPending}
               className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
             >
-              {predMut.isPending ? 'Predicting...' : 'Predict Failure'}
+              {predMut.isPending ? '预测中...' : '预测故障'}
             </button>
           </div>
 
@@ -146,7 +152,7 @@ export default function Maintenance() {
 
           {predResult && (
             <div className="mt-4 bg-slate-700/50 rounded p-4 flex flex-col items-center">
-              <div className="text-xs text-slate-400 mb-2">Failure Probability</div>
+              <div className="text-xs text-slate-400 mb-2">故障概率</div>
               <div className={`text-5xl font-bold ${probGaugeColor(predResult.failure_probability)}`}>
                 {(predResult.failure_probability * 100).toFixed(1)}%
               </div>

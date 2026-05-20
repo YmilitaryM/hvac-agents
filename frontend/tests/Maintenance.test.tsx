@@ -24,25 +24,25 @@ beforeEach(() => {
 describe('Maintenance page', () => {
   it('renders the page title', () => {
     renderPage();
-    expect(screen.getByText('Predictive Maintenance')).toBeDefined();
+    expect(screen.getByText('预测维护')).toBeDefined();
   });
 
   it('renders health overview cards', () => {
     renderPage();
-    expect(screen.getByText('Healthy')).toBeDefined();
-    expect(screen.getByText('Degrading')).toBeDefined();
-    expect(screen.getByText('Critical')).toBeDefined();
+    expect(screen.getByText('健康')).toBeDefined();
+    expect(screen.getByText('退化中')).toBeDefined();
+    expect(screen.getByText('严重')).toBeDefined();
   });
 
   it('renders evaluation and prediction panels', () => {
     renderPage();
-    expect(screen.getByText('Degradation Evaluation')).toBeDefined();
-    expect(screen.getByText('Failure Prediction')).toBeDefined();
+    expect(screen.getByText('退化评估')).toBeDefined();
+    expect(screen.getByText('故障预测')).toBeDefined();
   });
 
-  it('renders Run Evaluation and Predict Failure buttons', () => {
+  it('renders evaluation and predict buttons', () => {
     renderPage();
-    expect(screen.getByText('Run Evaluation')).toBeDefined();
-    expect(screen.getByText('Predict Failure')).toBeDefined();
+    expect(screen.getByText('运行评估')).toBeDefined();
+    expect(screen.getByText('预测故障')).toBeDefined();
   });
 });

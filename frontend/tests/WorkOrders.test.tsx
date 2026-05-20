@@ -36,7 +36,7 @@ describe('WorkOrders page', () => {
       json: () => Promise.resolve(mockOrders),
     } as Response);
     renderPage();
-    expect(screen.getByText('Work Orders')).toBeDefined();
+    expect(screen.getByText('工单管理')).toBeDefined();
   });
 
   it('renders status count cards', async () => {
@@ -45,11 +45,10 @@ describe('WorkOrders page', () => {
       json: () => Promise.resolve(mockOrders),
     } as Response);
     renderPage();
-    // Use getAllByText since labels also appear in the filter <select> options
-    await screen.findByText('Work Orders');
-    expect(screen.getAllByText('Open').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Acknowledged').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Resolved').length).toBeGreaterThanOrEqual(1);
+    await screen.findByText('工单管理');
+    expect(screen.getAllByText('待处理').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('已确认').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('已解决').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders work order titles in table', async () => {

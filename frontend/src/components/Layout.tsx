@@ -11,11 +11,11 @@ const NAV = [
   { to: '/alerts', label: '告警' },
   { to: '/override', label: '手动干预' },
   { to: '/settings', label: '系统设置' },
-  // P3-D Edge Ops section
-  { section: '── Edge Ops ──' },
-  { to: '/edges', label: '🖥️ Edge Devices' },
-  { to: '/workorders', label: '🔧 Work Orders' },
-  { to: '/maintenance', label: '🔮 Maintenance' },
+  // P3-D 边缘运营
+  { section: '── 边缘运营 ──' },
+  { to: '/edges', label: '🖥️ 边缘设备' },
+  { to: '/workorders', label: '🔧 工单管理' },
+  { to: '/maintenance', label: '🔮 预测维护' },
 ];
 
 export default function Layout() {

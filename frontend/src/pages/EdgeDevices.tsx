@@ -10,9 +10,9 @@ function statusColor(s: string) {
 }
 
 function statusLabel(s: string) {
-  if (s === 'online') return 'Online';
-  if (s === 'warning') return 'Warning';
-  return 'Offline';
+  if (s === 'online') return '在线';
+  if (s === 'warning') return '告警';
+  return '离线';
 }
 
 export default function EdgeDevices() {
@@ -80,7 +80,7 @@ export default function EdgeDevices() {
       const cfg = await fetchEdgeConfig(edge.edge_id);
       setConfigYaml(typeof cfg === 'string' ? cfg : JSON.stringify(cfg, null, 2));
     } catch {
-      setConfigYaml('# Failed to load config');
+      setConfigYaml('# 加载配置失败');
     }
     setShowConfig(true);
   };
@@ -92,19 +92,19 @@ export default function EdgeDevices() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">Edge Devices</h2>
+      <h2 className="text-xl font-bold mb-4">边缘设备</h2>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <KpiCard label="Online" value={String(online)} color="text-green-400" />
-        <KpiCard label="Offline" value={String(offline)} color="text-red-400" />
-        <KpiCard label="Warning" value={String(warning)} color="text-yellow-400" />
-        <KpiCard label="Total" value={String(edges.length)} />
+        <KpiCard label="在线" value={String(online)} color="text-green-400" />
+        <KpiCard label="离线" value={String(offline)} color="text-red-400" />
+        <KpiCard label="告警" value={String(warning)} color="text-yellow-400" />
+        <KpiCard label="总计" value={String(edges.length)} />
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <input
           type="text"
-          placeholder="Search by Edge ID or Plant ID..."
+          placeholder="搜索边缘ID或制冷站ID..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200 placeholder-slate-400 flex-1 min-w-[200px]"
@@ -114,16 +114,16 @@ export default function EdgeDevices() {
           onChange={e => setStatusFilter(e.target.value)}
           className="bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200"
         >
-          <option value="">All Status</option>
-          <option value="online">Online</option>
-          <option value="warning">Warning</option>
-          <option value="offline">Offline</option>
+          <option value="">全部状态</option>
+          <option value="online">在线</option>
+          <option value="warning">告警</option>
+          <option value="offline">离线</option>
         </select>
         <button
           onClick={() => setShowRegister(true)}
           className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded text-sm font-medium"
         >
-          Register New
+          注册新设备
         </button>
       </div>
 
@@ -131,19 +131,19 @@ export default function EdgeDevices() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-700 text-slate-400 text-left">
-              <th className="px-4 py-3">Edge ID</th>
-              <th className="px-4 py-3">Plant</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Last Heartbeat</th>
-              <th className="px-4 py-3">Version</th>
-              <th className="px-4 py-3">Actions</th>
+              <th className="px-4 py-3">边缘ID</th>
+              <th className="px-4 py-3">制冷站</th>
+              <th className="px-4 py-3">状态</th>
+              <th className="px-4 py-3">最后心跳</th>
+              <th className="px-4 py-3">版本</th>
+              <th className="px-4 py-3">操作</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">Loading...</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">加载中...</td></tr>
             ) : edges.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">No devices found</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-500">未找到设备</td></tr>
             ) : (
               edges.map(e => (
                 <tr key={e.edge_id} className="border-b border-slate-700/50 hover:bg-slate-700/30">
@@ -160,9 +160,9 @@ export default function EdgeDevices() {
                   <td className="px-4 py-3 text-xs">{e.version}</td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
-                      <button onClick={() => openConfig(e)} className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded">Config</button>
+                      <button onClick={() => openConfig(e)} className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded">配置</button>
                       <button onClick={() => openOTA(e)} className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded">OTA</button>
-                      <button onClick={() => { if (confirm('Delete this device?')) deleteMut.mutate(e.edge_id); }} className="px-2 py-1 text-xs bg-red-900 hover:bg-red-800 text-red-300 rounded">Delete</button>
+                      <button onClick={() => { if (confirm('确认删除该设备？')) deleteMut.mutate(e.edge_id); }} className="px-2 py-1 text-xs bg-red-900 hover:bg-red-800 text-red-300 rounded">删除</button>
                     </div>
                   </td>
                 </tr>
@@ -175,43 +175,43 @@ export default function EdgeDevices() {
       {showRegister && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">Register New Edge Device</h3>
+            <h3 className="text-lg font-bold mb-4">注册新边缘设备</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Edge ID</label>
-                <input value={regId} onChange={e => setRegId(e.target.value)} placeholder="e.g. edge-01" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+                <label className="block text-xs text-slate-400 mb-1">边缘ID</label>
+                <input value={regId} onChange={e => setRegId(e.target.value)} placeholder="例如 edge-01" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Name</label>
-                <input value={regName} onChange={e => setRegName(e.target.value)} placeholder="e.g. Chiller Edge 1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+                <label className="block text-xs text-slate-400 mb-1">名称</label>
+                <input value={regName} onChange={e => setRegName(e.target.value)} placeholder="例如 冷水机组边缘1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Plant ID</label>
-                <input value={regPlantId} onChange={e => setRegPlantId(e.target.value)} placeholder="e.g. plant-01" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+                <label className="block text-xs text-slate-400 mb-1">制冷站ID</label>
+                <input value={regPlantId} onChange={e => setRegPlantId(e.target.value)} placeholder="例如 plant-01" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Mode</label>
+                <label className="block text-xs text-slate-400 mb-1">模式</label>
                 <select value={regMode} onChange={e => setRegMode(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200">
-                  <option value="hybrid">Hybrid</option>
-                  <option value="acquisition">Acquisition</option>
-                  <option value="control">Control</option>
-                  <option value="inspection">Inspection</option>
-                  <option value="full">Full</option>
+                  <option value="hybrid">混合模式</option>
+                  <option value="acquisition">采集模式</option>
+                  <option value="control">控制模式</option>
+                  <option value="inspection">巡检模式</option>
+                  <option value="full">全功能模式</option>
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Version</label>
-                <input value={regVersion} onChange={e => setRegVersion(e.target.value)} placeholder="e.g. 1.0.0" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+                <label className="block text-xs text-slate-400 mb-1">版本</label>
+                <input value={regVersion} onChange={e => setRegVersion(e.target.value)} placeholder="例如 1.0.0" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setShowRegister(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Cancel</button>
+              <button onClick={() => setShowRegister(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">取消</button>
               <button
                 onClick={() => registerMut.mutate({ id: regId, name: regName, plant_id: regPlantId, mode: regMode, version: regVersion })}
                 disabled={registerMut.isPending || !regId || !regName || !regPlantId || !regVersion}
                 className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
               >
-                {registerMut.isPending ? 'Registering...' : 'Register'}
+                {registerMut.isPending ? '注册中...' : '注册'}
               </button>
             </div>
             {registerMut.isError && (
@@ -224,7 +224,7 @@ export default function EdgeDevices() {
       {showConfig && selectedEdge && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-lg">
-            <h3 className="text-lg font-bold mb-2">Config: {selectedEdge.edge_id}</h3>
+            <h3 className="text-lg font-bold mb-2">配置: {selectedEdge.edge_id}</h3>
             <textarea
               value={configYaml}
               onChange={e => setConfigYaml(e.target.value)}
@@ -232,20 +232,20 @@ export default function EdgeDevices() {
               className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200 font-mono"
             />
             <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowConfig(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Close</button>
+              <button onClick={() => setShowConfig(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">关闭</button>
               <button
                 onClick={() => {
                   try {
                     const parsed = JSON.parse(configYaml);
                     configMut.mutate({ edgeId: selectedEdge.edge_id, config: parsed });
                   } catch {
-                    alert('Invalid JSON');
+                    alert('无效的JSON格式');
                   }
                 }}
                 disabled={configMut.isPending}
                 className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
               >
-                {configMut.isPending ? 'Saving...' : 'Save'}
+                {configMut.isPending ? '保存中...' : '保存'}
               </button>
             </div>
             {configMut.isError && (
@@ -258,21 +258,21 @@ export default function EdgeDevices() {
       {showOTA && selectedEdge && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">OTA Update: {selectedEdge.edge_id}</h3>
+            <h3 className="text-lg font-bold mb-4">OTA升级: {selectedEdge.edge_id}</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-slate-400 mb-1">Target Version</label>
-                <input value={otaVersion} onChange={e => setOtaVersion(e.target.value)} placeholder="e.g. 1.2.0" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+                <label className="block text-xs text-slate-400 mb-1">目标版本</label>
+                <input value={otaVersion} onChange={e => setOtaVersion(e.target.value)} placeholder="例如 1.2.0" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setShowOTA(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Cancel</button>
+              <button onClick={() => setShowOTA(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">取消</button>
               <button
                 onClick={() => otaMut.mutate({ edgeId: selectedEdge.edge_id, version: otaVersion })}
                 disabled={otaMut.isPending || !otaVersion}
                 className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
               >
-                {otaMut.isPending ? 'Creating...' : 'Create OTA Task'}
+                {otaMut.isPending ? '创建中...' : '创建OTA任务'}
               </button>
             </div>
           </div>
