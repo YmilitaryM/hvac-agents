@@ -9,6 +9,7 @@ import Simulation from './pages/Simulation';
 import Strategies from './pages/Strategies';
 import Reports from './pages/Reports';
 import Alerts from './pages/Alerts';
+import ManualOverride from './pages/ManualOverride';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/strategies" element={<Strategies />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/alerts" element={<Alerts />} />
+            <Route path="/override" element={<ManualOverride />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/profile" element={<Profile />} />
           </Route>

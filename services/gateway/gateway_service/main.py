@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from common.db import create_engine, create_session_factory, Base
+from common.metrics import MetricsMiddleware, metrics_endpoint
 
 from .auth import router as auth_router
-from .proxy import proxy_request, SERVICE_URLS
+from .proxy import proxy_request, SERVICE_URLS, register_ws_client, unregister_ws_client, broadcast_ws
 from .audit_middleware import AuditMiddleware
 from .rate_limiter import RateLimitMiddleware
 from .circuit_breaker import CircuitBreakerMiddleware
@@ -42,6 +43,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(MetricsMiddleware, service_name="gateway")
 app.add_middleware(AuditMiddleware)
 app.add_middleware(RateLimitMiddleware, rate=100, burst=200)
 app.add_middleware(CircuitBreakerMiddleware, failure_threshold=5, recovery_timeout=30.0)
@@ -58,3 +60,20 @@ async def api_proxy(request: Request, path: str):
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "gateway"}
+
+
+@app.get("/metrics")(metrics_endpoint)
+
+
+@app.websocket("/ws/monitor")
+async def ws_monitor(ws: WebSocket):
+    await register_ws_client(ws)
+    try:
+        while True:
+            # Keep-alive: accept messages from client (subscribe/unsubscribe)
+            data = await ws.receive_text()
+            # Client can send subscribe preferences, echoed for now
+    except WebSocketDisconnect:
+        pass
+    finally:
+        await unregister_ws_client(ws)

@@ -18,6 +18,7 @@
     "reactflow": "^11.11.4",
     "recharts": "^3.8.1",
     "tailwindcss": "^4.3.0",
+    "vite-plugin-pwa": "^0.21",
     "zustand": "^5.0.13"
   },
   "devDependencies": {

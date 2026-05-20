@@ -9,6 +9,7 @@ const NAV = [
   { to: '/strategies', label: '策略中心' },
   { to: '/reports', label: '报告' },
   { to: '/alerts', label: '告警' },
+  { to: '/override', label: '手动干预' },
   { to: '/settings', label: '系统设置' },
 ];
 

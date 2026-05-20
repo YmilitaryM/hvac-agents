@@ -1,5 +1,11 @@
+import asyncio
+import json
+import logging
+
 import httpx
-from fastapi import Request, HTTPException
+from fastapi import Request, HTTPException, WebSocket, WebSocketDisconnect
+
+logger = logging.getLogger(__name__)
 
 SERVICE_ROUTES = {
     "/api/equipment": "asset",
@@ -17,9 +23,44 @@ SERVICE_ROUTES = {
     "/api/benchmarking": "agent",
     "/api/rl": "agent",
     "/api/acquisition": "acquisition",
+    "/api/override": "agent",
 }
 
 SERVICE_URLS = {}
+
+# Connected WebSocket clients for real-time push
+_ws_clients: set[WebSocket] = set()
+
+WS_ROUTES: dict[str, str] = {
+    "/ws/monitor": "agent",
+}
+
+
+def get_backend_ws(path: str) -> str | None:
+    for prefix, svc in WS_ROUTES.items():
+        if path.startswith(prefix):
+            return svc
+    return None
+
+
+async def register_ws_client(ws: WebSocket) -> None:
+    await ws.accept()
+    _ws_clients.add(ws)
+
+
+async def unregister_ws_client(ws: WebSocket) -> None:
+    _ws_clients.discard(ws)
+
+
+async def broadcast_ws(data: dict) -> None:
+    dead: set[WebSocket] = set()
+    payload = json.dumps(data)
+    for ws in _ws_clients:
+        try:
+            await ws.send_text(payload)
+        except Exception:
+            dead.add(ws)
+    _ws_clients -= dead
 
 
 def get_backend(path: str) -> str | None:
