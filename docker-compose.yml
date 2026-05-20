@@ -160,8 +160,45 @@ services:
       SIM_SERVICE_URL: http://sim_service:8000
       AGENT_SERVICE_URL: http://agent_service:8000
       ACQUISITION_SERVICE_URL: http://acquisition_service:8000
+      EDGEMANAGER_SERVICE_URL: http://edgemanager:8000
       JWT_SECRET: dev-secret-change-in-prod
-    depends_on: [asset_service, env_service, sim_service, agent_service, acquisition_service]
+    depends_on: [asset_service, env_service, sim_service, agent_service, acquisition_service, edgemanager]
+
+  postgres_edge:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: edge_db
+      POSTGRES_USER: hvac
+      POSTGRES_PASSWORD: hvac_dev
+    ports: ["5438:5432"]
+    volumes: [pg_edge:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hvac -d edge_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    ports: ["1883:1883", "9001:9001"]
+    volumes:
+      - ./services/edgemanager/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto_data:/mosquitto/data
+
+  edgemanager:
+    build:
+      context: .
+      dockerfile: services/edgemanager/Dockerfile
+    ports: ["8006:8000"]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@postgres_edge:5432/edge_db
+      MQTT_HOST: mosquitto
+      JWT_SECRET: dev-secret-change-in-prod
+    depends_on:
+      postgres_edge:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
 
 volumes:
   pg_asset: ~
@@ -169,3 +206,5 @@ volumes:
   pg_sim: ~
   pg_agent: ~
   tsdb_acq: ~
+  pg_edge: ~
+  mosquitto_data: ~
