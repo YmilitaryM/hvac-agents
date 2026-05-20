@@ -13,7 +13,13 @@ dependencies = [
     "pyyaml>=6.0",
     "scikit-learn>=1.5",
     "numpy>=1.26",
+    "skl2onnx>=1.17",
 ]
 
 [tool.uv.sources]
 hvac-common = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0",
+]
