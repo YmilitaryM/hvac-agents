@@ -2,6 +2,11 @@ import pytest
 from src.config import Config, get_config, set_config
 
 
+def pytest_configure(config):
+    config.addinivalue_line("markers", "integration: integration tests requiring running services")
+    config.addinivalue_line("markers", "asyncio: async test marker")
+
+
 @pytest.fixture
 def test_config():
     cfg = Config(debug=True)

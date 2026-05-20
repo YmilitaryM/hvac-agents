@@ -1,11 +1,10 @@
-name: CI
+name: Nightly
 on:
-  pull_request:
-  push:
-    branches: [master]
+  schedule:
+    - cron: "0 5 * * *"
 
 jobs:
-  lint-and-test:
+  full-test:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -29,10 +28,9 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
-      - run: uv sync
+      - run: uv sync --group dev
       - run: uv run ruff check .
-      - run: uv run mypy common/ services/ --ignore-missing-imports
-      - run: uv run pytest --cov --cov-report=xml --cov-report=term
-      - uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+      - run: uv run mypy common/ services/
+      - run: uv run pytest --cov --cov-report=xml -v --durations=10
+      - run: uv run bandit -r services/ common/ -ll || true
+      - run: uv run pip-audit || true
