@@ -3,9 +3,10 @@ import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, TransformControls, Html } from '@react-three/drei';
 import { usePlantStore } from './store';
-import { ChillerModel, PumpModel, CoolingTowerModel, ValveModel, SensorModel, PipeMesh } from './models';
+import { ChillerModel, PumpModel, CoolingTowerModel, ValveModel, SensorModel, PipeMesh, PipeFlow } from './models';
 import { getPointDefs, POINT_COLORS } from './types';
 import { usePipeConnection } from './interaction/usePipeConnection';
+import SensorOverlay from './SensorOverlay';
 
 interface EquipmentNodeProps {
   eq: {
@@ -82,7 +83,7 @@ function PointBadges({ eq, onPointClick, activePointCode }: PointBadgesProps) {
   );
 }
 
-function PipeLines() {
+function PipeLines({ showFlow }: { showFlow: boolean }) {
   const pipeSegments = usePlantStore(s => s.pipeSegments);
   const equipment = usePlantStore(s => s.equipment);
   const selectedId = usePlantStore(s => s.selectedId);
@@ -101,15 +102,24 @@ function PipeLines() {
         const toEq = eqMap.get(ps.to_equipment_id);
         if (!fromEq || !toEq) return null;
         return (
-          <PipeMesh
-            key={ps.id}
-            start={fromEq.position}
-            end={toEq.position}
-            waypoints={ps.waypoints}
-            diameter={ps.diameter_mm}
-            onClick={() => setSelection(ps.id)}
-            selected={selectedId === ps.id}
-          />
+          <group key={ps.id}>
+            <PipeMesh
+              start={fromEq.position}
+              end={toEq.position}
+              waypoints={ps.waypoints}
+              diameter={ps.diameter_mm}
+              onClick={() => setSelection(ps.id)}
+              selected={selectedId === ps.id}
+            />
+            {showFlow && (
+              <PipeFlow
+                start={fromEq.position}
+                end={toEq.position}
+                waypoints={ps.waypoints}
+                diameter={ps.diameter_mm}
+              />
+            )}
+          </group>
         );
       })}
     </group>
@@ -145,7 +155,7 @@ function SelectedTransform() {
   );
 }
 
-export default function PlantCanvas() {
+export default function PlantCanvas({ showFlow = true }: { showFlow?: boolean }) {
   const equipment = usePlantStore(s => s.equipment);
   const { activeConnection, startConnection, completeConnection } = usePipeConnection();
 
@@ -198,7 +208,7 @@ export default function PlantCanvas() {
             />
           </group>
         ))}
-        <PipeLines />
+        <PipeLines showFlow={showFlow} />
       </group>
       <SelectedTransform />
       <OrbitControls
@@ -207,6 +217,10 @@ export default function PlantCanvas() {
         minDistance={5}
         maxDistance={60}
         target={[0, 1, 0]}
+        touches={{
+          ONE: THREE.TOUCH.ROTATE,
+          TWO: THREE.TOUCH.DOLLY_PAN,
+        }}
       />
       {activeConnection && (
         <Html position={[0, -1, 0]} center>
@@ -215,6 +229,7 @@ export default function PlantCanvas() {
           </div>
         </Html>
       )}
+      <SensorOverlay />
     </Canvas>
   );
 }

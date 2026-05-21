@@ -39,7 +39,7 @@ describe('PlantBuilder page', () => {
     } as Response);
     renderPage();
     expect(screen.getByText('制冷站构建')).toBeDefined();
-    expect(screen.getByText('添加设备')).toBeDefined();
+    expect(screen.getByText('+设备')).toBeDefined();
   });
 
   it('shows plant name when fetching by id', async () => {
@@ -116,7 +116,7 @@ describe('PlantBuilder page', () => {
     // By default equipment panel should not be visible
     expect(screen.queryByText('设备库')).toBeNull();
     // Click add equipment button
-    screen.getByText('添加设备').click();
+    screen.getByText('+设备').click();
     await waitFor(() => {
       expect(screen.getByText('设备库')).toBeDefined();
     });
@@ -128,18 +128,17 @@ describe('PlantBuilder page', () => {
       json: () => Promise.resolve({ templates: [] }),
     } as Response);
     renderPage();
-    expect(screen.getByText('添加设备')).toBeDefined();
-    expect(screen.getByText('校验拓扑')).toBeDefined();
+    expect(screen.getByText('+设备')).toBeDefined();
+    expect(screen.getByText('校验')).toBeDefined();
     expect(screen.getByText('保存')).toBeDefined();
   });
 
-  it('renders property panel and pipe table sections', () => {
+  it('renders pipe table section', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ templates: [] }),
     } as Response);
     renderPage();
-    expect(screen.getByText('属性')).toBeDefined();
     expect(screen.getByText('管段列表')).toBeDefined();
   });
 });

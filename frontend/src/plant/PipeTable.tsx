@@ -1,5 +1,30 @@
 import { usePlantStore } from './store';
 
+function MobileCard({ ps, index, getEqName, onClick }: {
+  ps: { id: string; from_equipment_id: string; from_point_code: string; to_equipment_id: string; diameter_mm: number; length_m: number };
+  index: number;
+  getEqName: (id: string) => string;
+  onClick: () => void;
+}) {
+  return (
+    <div
+      onClick={onClick}
+      className="bg-slate-800/50 border border-slate-700/50 rounded p-2 cursor-pointer hover:bg-slate-700/50"
+    >
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-xs text-slate-500">#{index + 1}</span>
+        <span className="text-xs text-slate-500">DN{ps.diameter_mm} · {ps.length_m}m</span>
+      </div>
+      <div className="flex items-center gap-1 text-xs">
+        <span className="text-slate-300 truncate max-w-[100px]">{getEqName(ps.from_equipment_id)}</span>
+        <span className="text-cyan-400 font-mono text-[10px]">({ps.from_point_code})</span>
+        <span className="text-slate-600">→</span>
+        <span className="text-slate-300 truncate max-w-[100px]">{getEqName(ps.to_equipment_id)}</span>
+      </div>
+    </div>
+  );
+}
+
 export function PipeTable() {
   const pipeSegments = usePlantStore(s => s.pipeSegments);
   const equipment = usePlantStore(s => s.equipment);
@@ -17,34 +42,50 @@ export function PipeTable() {
         {pipeSegments.length === 0 ? (
           <p className="text-xs text-slate-600 p-3">暂无管段 — 在画布上拖拽点位连线</p>
         ) : (
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-slate-500 border-b border-slate-700">
-                <th className="text-left px-3 py-1.5 font-medium">#</th>
-                <th className="text-left px-3 py-1.5 font-medium">源设备</th>
-                <th className="text-left px-3 py-1.5 font-medium">源点位</th>
-                <th className="text-left px-3 py-1.5 font-medium">目标设备</th>
-                <th className="text-left px-3 py-1.5 font-medium">管径</th>
-                <th className="text-left px-3 py-1.5 font-medium">长度</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pipeSegments.map((ps, i) => (
-                <tr
-                  key={ps.id}
-                  onClick={() => setSelection(ps.id)}
-                  className="border-b border-slate-700/50 hover:bg-slate-700/50 cursor-pointer text-slate-300"
-                >
-                  <td className="px-3 py-1 text-slate-600">{i + 1}</td>
-                  <td className="px-3 py-1">{getEqName(ps.from_equipment_id)}</td>
-                  <td className="px-3 py-1 text-cyan-400 font-mono">{ps.from_point_code}</td>
-                  <td className="px-3 py-1">{getEqName(ps.to_equipment_id)}</td>
-                  <td className="px-3 py-1">DN{ps.diameter_mm}</td>
-                  <td className="px-3 py-1">{ps.length_m}m</td>
+          <>
+            {/* Desktop table */}
+            <table className="w-full text-xs hidden md:table">
+              <thead>
+                <tr className="text-slate-500 border-b border-slate-700">
+                  <th className="text-left px-3 py-1.5 font-medium">#</th>
+                  <th className="text-left px-3 py-1.5 font-medium">源设备</th>
+                  <th className="text-left px-3 py-1.5 font-medium">源点位</th>
+                  <th className="text-left px-3 py-1.5 font-medium">目标设备</th>
+                  <th className="text-left px-3 py-1.5 font-medium">管径</th>
+                  <th className="text-left px-3 py-1.5 font-medium">长度</th>
                 </tr>
+              </thead>
+              <tbody>
+                {pipeSegments.map((ps, i) => (
+                  <tr
+                    key={ps.id}
+                    onClick={() => setSelection(ps.id)}
+                    className="border-b border-slate-700/50 hover:bg-slate-700/50 cursor-pointer text-slate-300"
+                  >
+                    <td className="px-3 py-1 text-slate-600">{i + 1}</td>
+                    <td className="px-3 py-1">{getEqName(ps.from_equipment_id)}</td>
+                    <td className="px-3 py-1 text-cyan-400 font-mono">{ps.from_point_code}</td>
+                    <td className="px-3 py-1">{getEqName(ps.to_equipment_id)}</td>
+                    <td className="px-3 py-1">DN{ps.diameter_mm}</td>
+                    <td className="px-3 py-1">{ps.length_m}m</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Mobile card layout */}
+            <div className="md:hidden p-2 space-y-1.5">
+              {pipeSegments.map((ps, i) => (
+                <MobileCard
+                  key={ps.id}
+                  ps={ps}
+                  index={i}
+                  getEqName={getEqName}
+                  onClick={() => setSelection(ps.id)}
+                />
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
     </div>

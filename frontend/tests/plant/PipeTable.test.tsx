@@ -24,8 +24,8 @@ describe('PipeTable', () => {
       ],
     });
     render(<PipeTable />);
-    expect(screen.getByText('CH-1')).toBeDefined();
-    expect(screen.getByText('CT-1')).toBeDefined();
-    expect(screen.getByText('DN200')).toBeDefined();
+    expect(screen.getAllByText('CH-1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('CT-1').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/DN200/).length).toBeGreaterThan(0);
   });
 });

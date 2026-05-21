@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchEquipmentTypes, fetchEquipment, createEquipment, deleteEquipment } from '../api/equipment';
+import Modal from '../components/Modal';
 
 export default function Equipment() {
   const queryClient = useQueryClient();
@@ -33,29 +34,25 @@ export default function Equipment() {
         </button>
       </div>
 
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg p-6 w-96 border border-slate-700">
-            <h3 className="text-lg font-bold mb-4">添加设备</h3>
-            <input className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 mb-3 text-sm"
-              placeholder="设备名称" value={newName} onChange={e => setNewName(e.target.value)} />
-            <select className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 mb-3 text-sm"
-              value={newTypeId} onChange={e => setNewTypeId(e.target.value)}>
-              <option value="">选择设备类型...</option>
-              {types.map((t: { id: string; type_name: string; category: string }) => (
-                <option key={t.id} value={t.id}>{t.type_name} ({t.category})</option>
-              ))}
-            </select>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-slate-400">取消</button>
-              <button onClick={() => createMut.mutate({ name: newName, equipment_type_id: newTypeId })}
-                className="bg-cyan-600 px-4 py-2 rounded text-sm text-white">创建</button>
-            </div>
-          </div>
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="添加设备">
+        <input className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 mb-3 text-sm"
+          placeholder="设备名称" value={newName} onChange={e => setNewName(e.target.value)} />
+        <select className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 mb-3 text-sm"
+          value={newTypeId} onChange={e => setNewTypeId(e.target.value)}>
+          <option value="">选择设备类型...</option>
+          {types.map((t: { id: string; type_name: string; category: string }) => (
+            <option key={t.id} value={t.id}>{t.type_name} ({t.category})</option>
+          ))}
+        </select>
+        <div className="flex gap-2 justify-end">
+          <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-slate-400">取消</button>
+          <button onClick={() => createMut.mutate({ name: newName, equipment_type_id: newTypeId })}
+            className="bg-cyan-600 px-4 py-2 rounded text-sm text-white">创建</button>
         </div>
-      )}
+      </Modal>
 
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+      {/* Desktop table */}
+      <div className="hidden md:block bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-700 text-slate-400">
@@ -80,6 +77,23 @@ export default function Equipment() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-2">
+        {equipment.map((eq: { id: string; name: string; equipment_type_id: string; plant_id?: string; points?: Array<unknown> }) => (
+          <div key={eq.id} className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium text-sm">{eq.name}</span>
+              <button onClick={() => deleteMut.mutate(eq.id)} className="text-red-400 hover:text-red-300 text-xs">删除</button>
+            </div>
+            <div className="flex gap-4 text-xs text-slate-400">
+              <span>{eq.equipment_type_id}</span>
+              <span>{eq.plant_id || '未分配'}</span>
+              <span>{eq.points?.length || 0} 个采集点</span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

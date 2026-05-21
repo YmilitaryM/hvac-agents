@@ -11,7 +11,7 @@ interface EquipmentItem {
   design_params: Record<string, unknown>;
 }
 
-export function EquipmentPanel() {
+export function EquipmentPanel({ onClose }: { onClose?: () => void }) {
   const addEquipment = usePlantStore(s => s.addEquipment);
   const storeEquipment = usePlantStore(s => s.equipment);
   const existingIds = new Set(storeEquipment.map(e => e.id));
@@ -48,7 +48,12 @@ export function EquipmentPanel() {
   return (
     <div className="w-56 bg-slate-800 border-r border-slate-700 flex flex-col shrink-0">
       <div className="p-3 border-b border-slate-700">
-        <h3 className="text-sm font-semibold text-slate-400">设备库</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-slate-400">设备库</h3>
+          {onClose && (
+            <button onClick={onClose} className="md:hidden text-slate-400 hover:text-white text-lg leading-none">&times;</button>
+          )}
+        </div>
         <p className="text-xs text-slate-600 mt-1">点击设备添加到画布</p>
       </div>
       <div className="flex-1 overflow-y-auto p-2 space-y-3">
