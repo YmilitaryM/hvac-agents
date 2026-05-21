@@ -10,6 +10,7 @@ import { validateTopology, type ValidationIssue } from '../plant/validateTopolog
 import { useKeyboardShortcuts } from '../plant/useKeyboardShortcuts';
 import { useSensorDataSubscription } from '../plant/useSensorDataSubscription';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useCollaboration } from '../plant/useCollaboration';
 import BottomSheet from '../components/BottomSheet';
 
 export default function PlantBuilder() {
@@ -28,6 +29,7 @@ export default function PlantBuilder() {
   const redo = usePlantStore(s => s.redo);
   useKeyboardShortcuts();
   useSensorDataSubscription();
+  const { remoteCount } = useCollaboration(id);
   const [showEquipmentPanel, setShowEquipmentPanel] = useState(false);
   const [showFlow, setShowFlow] = useState(true);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[] | null>(null);
@@ -94,6 +96,11 @@ export default function PlantBuilder() {
         <span className="text-[10px] md:text-xs text-slate-500 hidden sm:inline">
           {equipmentCount} 设备 | {pipeCount} 管段
         </span>
+        {remoteCount > 0 && (
+          <span className="text-[10px] md:text-xs text-green-400 hidden sm:inline" title="在线协作人数">
+            · {remoteCount + 1} 在线
+          </span>
+        )}
         <div className="flex-1" />
         <button
           onClick={undo}

@@ -7,6 +7,7 @@ import { ChillerModel, PumpModel, CoolingTowerModel, ValveModel, SensorModel, Pi
 import { getPointDefs, POINT_COLORS } from './types';
 import { usePipeConnection } from './interaction/usePipeConnection';
 import SensorOverlay from './SensorOverlay';
+import RemoteCursors from './RemoteCursors';
 
 interface EquipmentNodeProps {
   eq: {
@@ -230,6 +231,7 @@ export default function PlantCanvas({ showFlow = true }: { showFlow?: boolean })
         </Html>
       )}
       <SensorOverlay />
+      <RemoteCursors />
     </Canvas>
   );
 }

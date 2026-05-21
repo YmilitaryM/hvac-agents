@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import KpiCard from '../components/KpiCard';
+import Modal from '../components/Modal';
 import { fetchWorkOrders, createWorkOrder, transitionWorkOrder, type WorkOrder } from '../api/workorders';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
@@ -52,6 +53,48 @@ function severityBadge(s: string) {
     info: 'bg-blue-600',
   };
   return `px-2 py-0.5 rounded text-xs font-medium text-white ${colors[s] || 'bg-slate-600'}`;
+}
+
+function transitionActionLabel(ns: string) {
+  const labels: Record<string, string> = {
+    acknowledged: '确认',
+    in_progress: '开始处理',
+    resolved: '解决',
+    closed: '关闭',
+    rejected: '驳回',
+  };
+  return labels[ns] || ns;
+}
+
+function WoCard({ wo, onDetail, onTransition }: {
+  wo: WorkOrder;
+  onDetail: (wo: WorkOrder) => void;
+  onTransition: (wo: WorkOrder) => void;
+}) {
+  const nextStates = VALID_TRANSITIONS[wo.status] || [];
+  return (
+    <div className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+      <div className="flex items-center justify-between mb-1">
+        <button onClick={() => onDetail(wo)} className="text-cyan-400 hover:underline text-sm text-left font-medium">
+          {wo.title}
+        </button>
+        <span className={severityBadge(wo.severity)}>{severityLabel(wo.severity)}</span>
+      </div>
+      <div className="flex gap-2 text-xs text-slate-400 mb-2">
+        <span className="font-mono">{wo.id?.slice(0, 8)}</span>
+        <span>{wo.equipment_id}</span>
+        <span className={statusBadge(wo.status)}>{statusLabel(wo.status)}</span>
+      </div>
+      <div className="flex items-center justify-between text-xs text-slate-500">
+        <span>{new Date(wo.created_at).toLocaleString()}</span>
+        {nextStates.length > 0 && (
+          <button onClick={() => onTransition(wo)} className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs">
+            {transitionActionLabel(nextStates[0])}
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function WorkOrders() {
@@ -109,17 +152,6 @@ export default function WorkOrders() {
     },
   });
 
-  const transitionActionLabel = (ns: string) => {
-    const labels: Record<string, string> = {
-      acknowledged: '确认',
-      in_progress: '开始处理',
-      resolved: '解决',
-      closed: '关闭',
-      rejected: '驳回',
-    };
-    return labels[ns] || ns;
-  };
-
   return (
     <div>
       <h2 className="text-xl font-bold mb-4">工单管理</h2>
@@ -160,7 +192,8 @@ export default function WorkOrders() {
         </button>
       </div>
 
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+      {/* Desktop table */}
+      <div className="hidden md:block bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-700 text-slate-400 text-left">
@@ -216,57 +249,69 @@ export default function WorkOrders() {
         </table>
       </div>
 
-      {showCreate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">新建工单</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">边缘ID</label>
-                <input value={woEdgeId} onChange={e => setWoEdgeId(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">设备ID</label>
-                <input value={woEquipId} onChange={e => setWoEquipId(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">级别</label>
-                <select value={woSeverity} onChange={e => setWoSeverity(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200">
-                  <option value="critical">严重</option>
-                  <option value="warning">告警</option>
-                  <option value="info">信息</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">标题</label>
-                <input value={woTitle} onChange={e => setWoTitle(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">描述</label>
-                <textarea value={woDesc} onChange={e => setWoDesc(e.target.value)} rows={3} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">取消</button>
-              <button
-                onClick={() => createMut.mutate({ edge_id: woEdgeId, equipment_id: woEquipId, severity: woSeverity, title: woTitle, description: woDesc })}
-                disabled={createMut.isPending || !woEdgeId || !woEquipId || !woTitle}
-                className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
-              >
-                {createMut.isPending ? '创建中...' : '创建'}
-              </button>
-            </div>
-            {createMut.isError && (
-              <p className="text-red-400 text-xs mt-2">{(createMut.error as Error).message}</p>
-            )}
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-2">
+        {isLoading ? (
+          <div className="text-slate-400 text-center py-8">加载中...</div>
+        ) : orders.length === 0 ? (
+          <div className="text-slate-500 text-center py-8">未找到工单</div>
+        ) : (
+          orders.map(wo => (
+            <WoCard
+              key={wo.id}
+              wo={wo}
+              onDetail={setSelectedDetail}
+              onTransition={(w) => { setShowTransition(w); setTransitionNote(''); }}
+            />
+          ))
+        )}
+      </div>
+
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="新建工单">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">边缘ID</label>
+            <input value={woEdgeId} onChange={e => setWoEdgeId(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">设备ID</label>
+            <input value={woEquipId} onChange={e => setWoEquipId(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">级别</label>
+            <select value={woSeverity} onChange={e => setWoSeverity(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200">
+              <option value="critical">严重</option>
+              <option value="warning">告警</option>
+              <option value="info">信息</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">标题</label>
+            <input value={woTitle} onChange={e => setWoTitle(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">描述</label>
+            <textarea value={woDesc} onChange={e => setWoDesc(e.target.value)} rows={3} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
           </div>
         </div>
-      )}
+        <div className="flex justify-end gap-2 mt-6">
+          <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">取消</button>
+          <button
+            onClick={() => createMut.mutate({ edge_id: woEdgeId, equipment_id: woEquipId, severity: woSeverity, title: woTitle, description: woDesc })}
+            disabled={createMut.isPending || !woEdgeId || !woEquipId || !woTitle}
+            className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
+          >
+            {createMut.isPending ? '创建中...' : '创建'}
+          </button>
+        </div>
+        {createMut.isError && (
+          <p className="text-red-400 text-xs mt-2">{(createMut.error as Error).message}</p>
+        )}
+      </Modal>
 
-      {showTransition && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-sm">
-            <h3 className="text-lg font-bold mb-2">变更工单状态</h3>
+      <Modal open={!!showTransition} onClose={() => setShowTransition(null)} title="变更工单状态" maxWidth="max-w-sm">
+        {showTransition && (
+          <>
             <p className="text-sm text-slate-400 mb-3">{showTransition.title} — 当前: <span className={statusBadge(showTransition.status)}>{statusLabel(showTransition.status)}</span></p>
             <div className="space-y-3">
               <div>
@@ -289,20 +334,16 @@ export default function WorkOrders() {
                 <input value={transitionNote} onChange={e => setTransitionNote(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setShowTransition(null)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">取消</button>
-            </div>
             {transitionMut.isError && (
               <p className="text-red-400 text-xs mt-2">{(transitionMut.error as Error).message}</p>
             )}
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
 
-      {selectedDetail && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-lg max-h-[80vh] overflow-auto">
-            <h3 className="text-lg font-bold mb-4">工单详情</h3>
+      <Modal open={!!selectedDetail} onClose={() => setSelectedDetail(null)} title="工单详情" maxWidth="max-w-lg">
+        {selectedDetail && (
+          <>
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between"><dt className="text-slate-400">ID</dt><dd className="font-mono">{selectedDetail.id}</dd></div>
               <div className="flex justify-between"><dt className="text-slate-400">标题</dt><dd>{selectedDetail.title}</dd></div>
@@ -322,12 +363,9 @@ export default function WorkOrders() {
                 <p className="text-sm text-slate-300 bg-slate-700/50 rounded p-3">{selectedDetail.description}</p>
               </div>
             )}
-            <div className="flex justify-end mt-6">
-              <button onClick={() => setSelectedDetail(null)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">关闭</button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

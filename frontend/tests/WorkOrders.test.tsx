@@ -57,8 +57,9 @@ describe('WorkOrders page', () => {
       json: () => Promise.resolve(mockOrders),
     } as Response);
     renderPage();
-    expect(await screen.findByText('Compressor failure')).toBeDefined();
-    expect(screen.getByText('Bearing wear')).toBeDefined();
-    expect(screen.getByText('Routine check')).toBeDefined();
+    const compressor = await screen.findAllByText('Compressor failure');
+    expect(compressor.length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Bearing wear').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Routine check').length).toBeGreaterThan(0);
   });
 });
