@@ -33,7 +33,9 @@ export function EquipmentPanel() {
   }
 
   const handleAdd = (eq: EquipmentItem) => {
-    const pos = computeLayout([{ id: eq.id, type_code: eq.type_code }])[0];
+    const existing = storeEquipment.map(e => ({ id: e.id, type_code: e.type_code }));
+    const allItems = [...existing, { id: eq.id, type_code: eq.type_code }];
+    const pos = computeLayout(allItems)[allItems.length - 1];
     addEquipment({
       id: eq.id,
       name: eq.name,
@@ -55,7 +57,9 @@ export function EquipmentPanel() {
         ) : availableEquipment.length === 0 ? (
           <p className="text-xs text-slate-600 p-2">暂无可选设备</p>
         ) : (
-          Object.entries(grouped).map(([typeCode, items]) => {
+          Object.entries(grouped)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([typeCode, items]) => {
             const traits = getEquipmentTraits(typeCode);
             return (
               <div key={typeCode}>

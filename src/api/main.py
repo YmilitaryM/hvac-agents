@@ -14,6 +14,8 @@ from fastapi.staticfiles import StaticFiles
 from .monitoring import router as monitoring_router
 from .strategy import router as strategy_router
 from .reports import router as reports_router
+from .plants import router as plants_router
+from .equipment import router as equipment_router
 from .websocket import router as ws_router
 
 logger = logging.getLogger(__name__)
@@ -73,6 +75,8 @@ def create_app(debug: bool = False) -> FastAPI:
     app.include_router(monitoring_router, prefix="/api/monitoring", tags=["Monitoring"])
     app.include_router(strategy_router, prefix="/api/strategies", tags=["Strategies"])
     app.include_router(reports_router, prefix="/api/reports", tags=["Reports"])
+    app.include_router(plants_router, prefix="/api/plants", tags=["Plants"])
+    app.include_router(equipment_router, prefix="/api/equipment", tags=["Equipment"])
     app.include_router(ws_router, tags=["WebSocket"])
 
     # Static files & dashboard

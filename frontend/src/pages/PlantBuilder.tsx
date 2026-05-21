@@ -15,7 +15,7 @@ export default function PlantBuilder() {
   const pipeCount = usePlantStore(s => s.pipeSegments.length);
   const [showEquipmentPanel, setShowEquipmentPanel] = useState(false);
 
-  const { data: plant, isLoading } = useQuery({
+  const { data: plant, isLoading, isError } = useQuery({
     queryKey: ['plant', id],
     queryFn: () => fetch(`/api/plants/${id}`).then(r => r.json()),
     enabled: !!id,
@@ -38,17 +38,26 @@ export default function PlantBuilder() {
           name: e.name,
           type_code: e.type_code,
           position: e.position,
+          design_params: e.design_params,
         })),
         pipe_segments: state.pipeSegments,
       };
-      return fetch('/api/plants/', {
-        method: 'POST',
+      const url = state.plantId ? `/api/plants/${state.plantId}` : '/api/plants/';
+      const method = state.plantId ? 'PUT' : 'POST';
+      return fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-      }).then(r => r.json());
+      }).then(r => {
+        if (!r.ok) throw new Error(`保存失败: ${r.status}`);
+        return r.json();
+      });
     },
     onSuccess: (data) => {
       usePlantStore.setState({ plantId: data.id, plantName: data.name });
+    },
+    onError: (err) => {
+      console.error('保存失败:', err);
     },
   });
 
@@ -87,6 +96,8 @@ export default function PlantBuilder() {
         <div className="flex-1 relative bg-slate-900">
           {isLoading ? (
             <div className="flex items-center justify-center h-full text-slate-400">加载制冷站...</div>
+          ) : isError ? (
+            <div className="flex items-center justify-center h-full text-red-400">加载失败，请检查网络连接后刷新页面</div>
           ) : (
             <PlantCanvas />
           )}

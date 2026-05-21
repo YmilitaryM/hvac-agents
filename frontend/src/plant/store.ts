@@ -51,8 +51,10 @@ export const usePlantStore = create<PlantState>((set) => ({
   loadPlantData: (data) => set({
     plantId: data.id,
     plantName: data.name,
-    equipment: data.equipment,
-    pipeSegments: data.pipe_segments,
+    equipment: Array.isArray(data.equipment)
+      ? data.equipment.map((e: Record<string, unknown>) => ({ ...e, design_params: e.design_params || {} }))
+      : [],
+    pipeSegments: Array.isArray(data.pipe_segments) ? data.pipe_segments : [],
     selectedId: null,
   }),
 

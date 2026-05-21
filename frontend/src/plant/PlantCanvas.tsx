@@ -1,10 +1,11 @@
 import { useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, TransformControls } from '@react-three/drei';
+import { OrbitControls, Grid, TransformControls, Html } from '@react-three/drei';
 import { usePlantStore } from './store';
-import { ChillerModel, PumpModel, CoolingTowerModel, ValveModel, PipeMesh } from './models';
+import { ChillerModel, PumpModel, CoolingTowerModel, ValveModel, SensorModel, PipeMesh } from './models';
 import { getPointDefs, POINT_COLORS } from './types';
+import { usePipeConnection } from './interaction/usePipeConnection';
 
 interface EquipmentNodeProps {
   eq: {
@@ -28,6 +29,11 @@ function EquipmentNode({ eq }: EquipmentNodeProps) {
     case 'pump': return <PumpModel {...props} />;
     case 'cooling_tower': return <CoolingTowerModel {...props} />;
     case 'control_valve': return <ValveModel {...props} />;
+    case 'temperature_sensor':
+    case 'pressure_sensor':
+    case 'flow_sensor':
+    case 'power_meter':
+      return <SensorModel {...props} typeCode={eq.type_code} />;
     default: return <ChillerModel {...props} />;
   }
 }
@@ -38,9 +44,11 @@ interface PointBadgesProps {
     type_code: string;
     position: { x: number; y: number; z: number };
   };
+  onPointClick?: (pointCode: string) => void;
+  activePointCode?: string | null;
 }
 
-function PointBadges({ eq }: PointBadgesProps) {
+function PointBadges({ eq, onPointClick, activePointCode }: PointBadgesProps) {
   const points = getPointDefs(eq.type_code);
   return (
     <group>
@@ -50,11 +58,23 @@ function PointBadges({ eq }: PointBadgesProps) {
         const px = eq.position.x + Math.cos(angle) * r;
         const py = eq.position.y + 1 + (i % 3) * 0.3;
         const pz = eq.position.z + Math.sin(angle) * r;
-        const color = POINT_COLORS[p.io_direction] || '#ffffff';
+        const baseColor = POINT_COLORS[p.io_direction] || '#ffffff';
+        const isActive = activePointCode === p.code;
+        const color = isActive ? '#fbbf24' : baseColor;
+        const scale = isActive ? 1.5 : 1;
         return (
-          <mesh key={p.code} position={[px, py, pz]}>
+          <mesh
+            key={p.code}
+            position={[px, py, pz]}
+            scale={scale}
+            onClick={(e) => { e.stopPropagation(); onPointClick?.(p.code); }}
+          >
             <sphereGeometry args={[0.1, 16, 16]} />
-            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.5} />
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={isActive ? 0.9 : 0.5}
+            />
           </mesh>
         );
       })}
@@ -121,6 +141,15 @@ function SelectedTransform() {
 
 export default function PlantCanvas() {
   const equipment = usePlantStore(s => s.equipment);
+  const { activeConnection, startConnection, completeConnection } = usePipeConnection();
+
+  const handlePointClick = useCallback((eqId: string, pointCode: string) => {
+    if (!activeConnection) {
+      startConnection(eqId, pointCode);
+    } else {
+      completeConnection(eqId, pointCode);
+    }
+  }, [activeConnection, startConnection, completeConnection]);
 
   return (
     <Canvas
@@ -152,7 +181,15 @@ export default function PlantCanvas() {
         {equipment.map(eq => (
           <group key={eq.id}>
             <EquipmentNode eq={eq} />
-            <PointBadges eq={eq} />
+            <PointBadges
+              eq={eq}
+              onPointClick={(pointCode) => handlePointClick(eq.id, pointCode)}
+              activePointCode={
+                activeConnection?.fromEquipmentId === eq.id
+                  ? activeConnection.fromPointCode
+                  : null
+              }
+            />
           </group>
         ))}
         <PipeLines />
@@ -165,6 +202,13 @@ export default function PlantCanvas() {
         maxDistance={60}
         target={[0, 1, 0]}
       />
+      {activeConnection && (
+        <Html position={[0, -1, 0]} center>
+          <div className="bg-amber-500 text-black text-xs px-2 py-1 rounded whitespace-nowrap">
+            连接中... 点击目标设备点位完成连接 (点击同一设备取消)
+          </div>
+        </Html>
+      )}
     </Canvas>
   );
 }

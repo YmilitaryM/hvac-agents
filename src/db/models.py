@@ -144,3 +144,25 @@ class RLTrainingExampleModel(Base):
     action_taken: Mapped[str] = mapped_column(String(16), nullable=False)
     reward: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class PlantModel(Base):
+    __tablename__ = "plants"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    name: Mapped[str] = mapped_column(String(128), nullable=False, default="新建制冷站")
+    equipment_data: Mapped[Optional[List]] = mapped_column(JSON, nullable=True)
+    pipe_segments: Mapped[Optional[List]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class EquipmentModel(Base):
+    __tablename__ = "equipment"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_new_id)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    type_code: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    plant_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, index=True)
+    design_params: Mapped[Optional[Dict]] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

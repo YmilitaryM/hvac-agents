@@ -7,7 +7,9 @@ from src.config import get_config
 from src.db.engine import get_session
 from src.db.repositories import (
     AlertRepository,
+    EquipmentRepository,
     MemoryRepository,
+    PlantRepository,
     ReportRepository,
     RLRepository,
     SnapshotRepository,
@@ -55,3 +57,11 @@ async def get_memory_repo(session: AsyncSession = Depends(get_db_session)) -> Me
 
 async def get_rl_repo(session: AsyncSession = Depends(get_db_session)) -> RLRepository:
     return RLRepository(session)
+
+
+async def get_plant_repo(session: AsyncSession = Depends(get_db_session)) -> PlantRepository:
+    return PlantRepository(session)
+
+
+async def get_equipment_repo(session: AsyncSession = Depends(get_db_session)) -> EquipmentRepository:
+    return EquipmentRepository(session)

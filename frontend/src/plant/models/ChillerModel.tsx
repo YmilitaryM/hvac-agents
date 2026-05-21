@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-import { useRef } from 'react';
 import { getEquipmentTraits } from '../types';
 
 interface ChillerModelProps {
@@ -9,12 +7,11 @@ interface ChillerModelProps {
 }
 
 export function ChillerModel({ position, onClick, selected }: ChillerModelProps) {
-  const groupRef = useRef<THREE.Group>(null);
   const { color, dimensions } = getEquipmentTraits('centrifugal_chiller');
   const { width, height, depth } = dimensions;
 
   return (
-    <group ref={groupRef} position={position} onClick={onClick}>
+    <group position={position} onClick={onClick}>
       {/* Main body */}
       <mesh castShadow position={[0, height / 2, 0]}>
         <boxGeometry args={[width, height, depth]} />

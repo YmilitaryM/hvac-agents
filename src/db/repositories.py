@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import (
     AlertModel,
+    EquipmentModel,
     MemoryLogEntryModel,
+    PlantModel,
     PlantSnapshotModel,
     ReportModel,
     RLTrainingExampleModel,
@@ -266,3 +268,93 @@ class RLRepository:
             .limit(limit)
         )
         return list(result.scalars().all())
+
+
+class PlantRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create(self, data: dict) -> PlantModel:
+        obj = PlantModel(**data)
+        self.session.add(obj)
+        await self.session.flush()
+        await self.session.commit()
+        return obj
+
+    async def get_by_id(self, plant_id: str) -> Optional[PlantModel]:
+        result = await self.session.execute(
+            select(PlantModel).where(PlantModel.id == plant_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def list_all(self, limit: int = 50) -> List[PlantModel]:
+        result = await self.session.execute(
+            select(PlantModel)
+            .order_by(PlantModel.updated_at.desc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def update(self, plant_id: str, data: dict) -> Optional[PlantModel]:
+        obj = await self.get_by_id(plant_id)
+        if obj is None:
+            return None
+        for key, value in data.items():
+            setattr(obj, key, value)
+        await self.session.flush()
+        await self.session.commit()
+        return obj
+
+    async def delete(self, plant_id: str) -> bool:
+        obj = await self.get_by_id(plant_id)
+        if obj is None:
+            return False
+        await self.session.delete(obj)
+        await self.session.flush()
+        await self.session.commit()
+        return True
+
+
+class EquipmentRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
+    async def create(self, data: dict) -> EquipmentModel:
+        obj = EquipmentModel(**data)
+        self.session.add(obj)
+        await self.session.flush()
+        await self.session.commit()
+        return obj
+
+    async def get_by_id(self, equipment_id: str) -> Optional[EquipmentModel]:
+        result = await self.session.execute(
+            select(EquipmentModel).where(EquipmentModel.id == equipment_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def list_available(self, limit: int = 100) -> List[EquipmentModel]:
+        """List equipment not assigned to any plant."""
+        result = await self.session.execute(
+            select(EquipmentModel)
+            .where(EquipmentModel.plant_id == None)
+            .order_by(EquipmentModel.type_code, EquipmentModel.name)
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def list_by_plant(self, plant_id: str) -> List[EquipmentModel]:
+        result = await self.session.execute(
+            select(EquipmentModel)
+            .where(EquipmentModel.plant_id == plant_id)
+            .order_by(EquipmentModel.type_code, EquipmentModel.name)
+        )
+        return list(result.scalars().all())
+
+    async def delete(self, equipment_id: str) -> bool:
+        obj = await self.get_by_id(equipment_id)
+        if obj is None:
+            return False
+        await self.session.delete(obj)
+        await self.session.flush()
+        await self.session.commit()
+        return True

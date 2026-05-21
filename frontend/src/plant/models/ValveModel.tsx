@@ -23,8 +23,8 @@ export function ValveModel({ position, onClick, selected }: ValveModelProps) {
         <boxGeometry args={[width * 0.5, height * 0.8, depth * 0.6]} />
         <meshStandardMaterial color={color} metalness={0.4} roughness={0.4} />
       </mesh>
-      {/* Handwheel */}
-      <mesh position={[0, height * 0.6 + height * 0.4, 0]}>
+      {/* Handwheel (XZ plane like steering wheel) */}
+      <mesh position={[0, height * 0.6 + height * 0.4, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[0.15, 0.03, 8, 16]} />
         <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.2} />
       </mesh>
