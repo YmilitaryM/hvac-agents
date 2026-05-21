@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   getEquipmentTraits,
+  getPointDefs,
   getDisplayPoints,
   getControlPoints,
+  getAllTypeCodes,
   POINT_COLORS,
 } from '../../src/plant/types';
 
@@ -37,16 +39,65 @@ describe('Equipment types', () => {
   });
 });
 
+describe('getAllTypeCodes', () => {
+  it('returns all equipment type codes', () => {
+    const codes = getAllTypeCodes();
+    expect(codes).toHaveLength(8);
+    expect(codes).toContain('centrifugal_chiller');
+    expect(codes).toContain('pump');
+    expect(codes).toContain('cooling_tower');
+    expect(codes).toContain('control_valve');
+    expect(codes).toContain('temperature_sensor');
+    expect(codes).toContain('pressure_sensor');
+    expect(codes).toContain('flow_sensor');
+    expect(codes).toContain('power_meter');
+  });
+});
+
+describe('getPointDefs', () => {
+  it('returns point definitions for a known type', () => {
+    const points = getPointDefs('centrifugal_chiller');
+    expect(points).toHaveLength(10);
+    expect(points[0]).toMatchObject({
+      code: 'chw_supply_temp',
+      name: '冷冻水供水温度',
+      io_direction: 'input',
+    });
+  });
+
+  it('returns point definitions for pump', () => {
+    const points = getPointDefs('pump');
+    expect(points).toHaveLength(6);
+  });
+
+  it('returns empty array for unknown type', () => {
+    const points = getPointDefs('unknown_type');
+    expect(points).toEqual([]);
+  });
+});
+
 describe('Point helpers', () => {
-  it('getDisplayPoints returns output and calc points', () => {
+  it('getDisplayPoints returns output and calc points for centrifugal_chiller', () => {
     const points = getDisplayPoints('centrifugal_chiller');
-    expect(points.length).toBeGreaterThan(0);
+    expect(points).toHaveLength(7);
     expect(points.every(p => p.io_direction === 'output' || p.io_direction === 'calc')).toBe(true);
   });
 
-  it('getControlPoints returns input points', () => {
+  it('getControlPoints returns input points for centrifugal_chiller', () => {
     const points = getControlPoints('centrifugal_chiller');
-    expect(points.length).toBeGreaterThan(0);
+    expect(points).toHaveLength(3);
+    expect(points.every(p => p.io_direction === 'input')).toBe(true);
+  });
+
+  it('getDisplayPoints returns output and calc points for pump', () => {
+    const points = getDisplayPoints('pump');
+    expect(points).toHaveLength(4);
+    expect(points.every(p => p.io_direction === 'output' || p.io_direction === 'calc')).toBe(true);
+  });
+
+  it('getControlPoints returns input points for pump', () => {
+    const points = getControlPoints('pump');
+    expect(points).toHaveLength(2);
     expect(points.every(p => p.io_direction === 'input')).toBe(true);
   });
 

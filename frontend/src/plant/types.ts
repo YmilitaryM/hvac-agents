@@ -9,7 +9,7 @@ export interface PointDef {
   code: string;
   name: string;
   unit: string;
-  data_type: string;
+  data_type: 'float' | 'string';
   io_direction: 'input' | 'output' | 'calc';
   required?: boolean;
   sort_order?: number;
@@ -116,7 +116,7 @@ const POINT_DEFS: Record<string, PointDef[]> = {
   ],
 };
 
-export const POINT_COLORS: Record<string, string> = {
+export const POINT_COLORS: Record<'input' | 'output' | 'calc', string> = {
   input: '#ef4444',
   output: '#22d3ee',
   calc: '#22d3ee',
