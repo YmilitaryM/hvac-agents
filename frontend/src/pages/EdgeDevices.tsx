@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import KpiCard from '../components/KpiCard';
+import Modal from '../components/Modal';
 import { fetchEdges, registerEdge, fetchEdgeConfig, setEdgeConfig, fetchOTATasks, createOTATask, deleteEdge, type EdgeDevice } from '../api/edges';
 
 function statusColor(s: string) {
@@ -85,7 +86,7 @@ export default function EdgeDevices() {
     setShowConfig(true);
   };
 
-  const openOTA = async (edge: EdgeDevice) => {
+  const openOTA = (edge: EdgeDevice) => {
     setSelectedEdge(edge);
     setShowOTA(true);
   };
@@ -127,7 +128,8 @@ export default function EdgeDevices() {
         </button>
       </div>
 
-      <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
+      {/* Desktop table */}
+      <div className="hidden md:block bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-700 text-slate-400 text-left">
@@ -172,112 +174,127 @@ export default function EdgeDevices() {
         </table>
       </div>
 
-      {showRegister && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">注册新边缘设备</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">边缘ID</label>
-                <input value={regId} onChange={e => setRegId(e.target.value)} placeholder="例如 edge-01" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-2">
+        {isLoading ? (
+          <div className="text-slate-400 text-center py-8">加载中...</div>
+        ) : edges.length === 0 ? (
+          <div className="text-slate-500 text-center py-8">未找到设备</div>
+        ) : (
+          edges.map(e => (
+            <div key={e.edge_id} className="bg-slate-800 border border-slate-700 rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-mono text-xs text-slate-300">{e.edge_id}</span>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusColor(e.status)} text-white`}>
+                  {statusLabel(e.status)}
+                </span>
               </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">名称</label>
-                <input value={regName} onChange={e => setRegName(e.target.value)} placeholder="例如 冷水机组边缘1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+              <div className="flex gap-3 text-xs text-slate-400 mb-2">
+                <span>制冷站: {e.plant_id}</span>
+                <span>v{e.version}</span>
               </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">制冷站ID</label>
-                <input value={regPlantId} onChange={e => setRegPlantId(e.target.value)} placeholder="例如 plant-01" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+              <div className="text-xs text-slate-500 mb-2">
+                {e.last_heartbeat ? new Date(e.last_heartbeat).toLocaleString() : '--'}
               </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">模式</label>
-                <select value={regMode} onChange={e => setRegMode(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200">
-                  <option value="hybrid">混合模式</option>
-                  <option value="acquisition">采集模式</option>
-                  <option value="control">控制模式</option>
-                  <option value="inspection">巡检模式</option>
-                  <option value="full">全功能模式</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">版本</label>
-                <input value={regVersion} onChange={e => setRegVersion(e.target.value)} placeholder="例如 1.0.0" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+              <div className="flex gap-1">
+                <button onClick={() => openConfig(e)} className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded">配置</button>
+                <button onClick={() => openOTA(e)} className="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded">OTA</button>
+                <button onClick={() => { if (confirm('确认删除该设备？')) deleteMut.mutate(e.edge_id); }} className="px-2 py-1 text-xs bg-red-900 hover:bg-red-800 text-red-300 rounded">删除</button>
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setShowRegister(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">取消</button>
-              <button
-                onClick={() => registerMut.mutate({ id: regId, name: regName, plant_id: regPlantId, mode: regMode, version: regVersion })}
-                disabled={registerMut.isPending || !regId || !regName || !regPlantId || !regVersion}
-                className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
-              >
-                {registerMut.isPending ? '注册中...' : '注册'}
-              </button>
-            </div>
-            {registerMut.isError && (
-              <p className="text-red-400 text-xs mt-2">{(registerMut.error as Error).message}</p>
-            )}
-          </div>
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
-      {showConfig && selectedEdge && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-lg">
-            <h3 className="text-lg font-bold mb-2">配置: {selectedEdge.edge_id}</h3>
-            <textarea
-              value={configYaml}
-              onChange={e => setConfigYaml(e.target.value)}
-              rows={12}
-              className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200 font-mono"
-            />
-            <div className="flex justify-end gap-2 mt-4">
-              <button onClick={() => setShowConfig(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">关闭</button>
-              <button
-                onClick={() => {
-                  try {
-                    const parsed = JSON.parse(configYaml);
-                    configMut.mutate({ edgeId: selectedEdge.edge_id, config: parsed });
-                  } catch {
-                    alert('无效的JSON格式');
-                  }
-                }}
-                disabled={configMut.isPending}
-                className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
-              >
-                {configMut.isPending ? '保存中...' : '保存'}
-              </button>
-            </div>
-            {configMut.isError && (
-              <p className="text-red-400 text-xs mt-2">{(configMut.error as Error).message}</p>
-            )}
+      <Modal open={showRegister} onClose={() => setShowRegister(false)} title="注册新边缘设备" maxWidth="max-w-md">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">边缘ID</label>
+            <input value={regId} onChange={e => setRegId(e.target.value)} placeholder="例如 edge-01" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">名称</label>
+            <input value={regName} onChange={e => setRegName(e.target.value)} placeholder="例如 冷水机组边缘1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">制冷站ID</label>
+            <input value={regPlantId} onChange={e => setRegPlantId(e.target.value)} placeholder="例如 plant-01" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">模式</label>
+            <select value={regMode} onChange={e => setRegMode(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200">
+              <option value="hybrid">混合模式</option>
+              <option value="acquisition">采集模式</option>
+              <option value="control">控制模式</option>
+              <option value="inspection">巡检模式</option>
+              <option value="full">全功能模式</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">版本</label>
+            <input value={regVersion} onChange={e => setRegVersion(e.target.value)} placeholder="例如 1.0.0" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
           </div>
         </div>
-      )}
+        <div className="flex justify-end gap-2 mt-6">
+          <button onClick={() => setShowRegister(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">取消</button>
+          <button
+            onClick={() => registerMut.mutate({ id: regId, name: regName, plant_id: regPlantId, mode: regMode, version: regVersion })}
+            disabled={registerMut.isPending || !regId || !regName || !regPlantId || !regVersion}
+            className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
+          >
+            {registerMut.isPending ? '注册中...' : '注册'}
+          </button>
+        </div>
+        {registerMut.isError && (
+          <p className="text-red-400 text-xs mt-2">{(registerMut.error as Error).message}</p>
+        )}
+      </Modal>
 
-      {showOTA && selectedEdge && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-slate-800 rounded-lg border border-slate-700 p-6 w-full max-w-md">
-            <h3 className="text-lg font-bold mb-4">OTA升级: {selectedEdge.edge_id}</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">目标版本</label>
-                <input value={otaVersion} onChange={e => setOtaVersion(e.target.value)} placeholder="例如 1.2.0" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setShowOTA(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">取消</button>
-              <button
-                onClick={() => otaMut.mutate({ edgeId: selectedEdge.edge_id, version: otaVersion })}
-                disabled={otaMut.isPending || !otaVersion}
-                className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
-              >
-                {otaMut.isPending ? '创建中...' : '创建OTA任务'}
-              </button>
-            </div>
-          </div>
+      <Modal open={showConfig && !!selectedEdge} onClose={() => setShowConfig(false)} title={`配置: ${selectedEdge?.edge_id}`} maxWidth="max-w-lg">
+        <textarea
+          value={configYaml}
+          onChange={e => setConfigYaml(e.target.value)}
+          rows={12}
+          className="w-full bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200 font-mono"
+        />
+        <div className="flex justify-end gap-2 mt-4">
+          <button onClick={() => setShowConfig(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">关闭</button>
+          <button
+            onClick={() => {
+              try {
+                const parsed = JSON.parse(configYaml);
+                configMut.mutate({ edgeId: selectedEdge!.edge_id, config: parsed });
+              } catch {
+                alert('无效的JSON格式');
+              }
+            }}
+            disabled={configMut.isPending}
+            className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
+          >
+            {configMut.isPending ? '保存中...' : '保存'}
+          </button>
         </div>
-      )}
+        {configMut.isError && (
+          <p className="text-red-400 text-xs mt-2">{(configMut.error as Error).message}</p>
+        )}
+      </Modal>
+
+      <Modal open={showOTA && !!selectedEdge} onClose={() => setShowOTA(false)} title={`OTA升级: ${selectedEdge?.edge_id}`}>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">目标版本</label>
+          <input value={otaVersion} onChange={e => setOtaVersion(e.target.value)} placeholder="例如 1.2.0" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+        </div>
+        <div className="flex justify-end gap-2 mt-6">
+          <button onClick={() => setShowOTA(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">取消</button>
+          <button
+            onClick={() => otaMut.mutate({ edgeId: selectedEdge!.edge_id, version: otaVersion })}
+            disabled={otaMut.isPending || !otaVersion}
+            className="px-4 py-2 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded disabled:opacity-50"
+          >
+            {otaMut.isPending ? '创建中...' : '创建OTA任务'}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
