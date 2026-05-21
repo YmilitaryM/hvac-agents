@@ -32,9 +32,11 @@ describe('PlantStore', () => {
       to_equipment_id: 'eq-2', to_point_code: 'inlet_pressure',
       diameter_mm: 200, length_m: 5, waypoints: [],
     });
+    usePlantStore.getState().setSelection('eq-1');
     usePlantStore.getState().removeEquipment('eq-1');
     expect(usePlantStore.getState().equipment).toHaveLength(1);
     expect(usePlantStore.getState().pipeSegments).toHaveLength(0);
+    expect(usePlantStore.getState().selectedId).toBeNull();
   });
 
   it('updates equipment position', () => {
@@ -68,12 +70,13 @@ describe('PlantStore', () => {
       id: 'plant-1',
       name: 'Test Plant',
       equipment: [
-        { id: 'eq-1', name: 'CH-1', type_code: 'centrifugal_chiller', position: { x: 0, y: 0, z: 0 } },
+        { id: 'eq-1', name: 'CH-1', type_code: 'centrifugal_chiller', position: { x: 0, y: 0, z: 0 }, design_params: {} },
       ],
       pipe_segments: [],
     });
     expect(usePlantStore.getState().plantId).toBe('plant-1');
     expect(usePlantStore.getState().plantName).toBe('Test Plant');
     expect(usePlantStore.getState().equipment).toHaveLength(1);
+    expect(usePlantStore.getState().selectedId).toBeNull();
   });
 });
