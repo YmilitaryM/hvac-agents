@@ -27,7 +27,8 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/equipment" element={<Equipment />} />
-            <Route path="/plant/:id?" element={<PlantBuilder />} />
+            <Route path="/plant" element={<PlantBuilder />} />
+            <Route path="/plant/:id" element={<PlantBuilder />} />
             <Route path="/environment" element={<Environment />} />
             <Route path="/simulation" element={<Simulation />} />
             <Route path="/strategies" element={<Strategies />} />
