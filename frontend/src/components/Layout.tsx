@@ -1,6 +1,15 @@
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useSidebarStore } from './useSidebarStore';
 import MobileSidebar from './MobileSidebar';
+import { useAuth } from '../contexts/AuthContext';
+
+const ROLE_LABELS: Record<string, string> = {
+  viewer: '查看者',
+  operator: '操作员',
+  engineer: '工程师',
+  admin: '管理员',
+  auditor: '审计员',
+};
 
 const NAV = [
   { to: '/', label: 'Dashboard', short: '🏠' },
@@ -22,6 +31,15 @@ const NAV = [
 
 export default function Layout() {
   const toggle = useSidebarStore(s => s.toggle);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    logout();
+    navigate('/login', { replace: true });
+  }
+
+  const roleLabel = user ? (ROLE_LABELS[user.role] ?? user.role) : '';
 
   return (
     <div className="flex h-screen bg-slate-900 text-slate-100">
@@ -52,6 +70,27 @@ export default function Layout() {
             );
           })}
         </nav>
+
+        {/* User info and logout */}
+        {user && (
+          <div className="border-t border-slate-700 pt-3 mt-3">
+            <div className="hidden lg:block text-sm text-slate-300 truncate" title={user.id}>
+              ID: {user.id}
+            </div>
+            <div className="hidden lg:block">
+              <span className="inline-block text-xs px-2 py-0.5 rounded bg-cyan-400/10 text-cyan-400 border border-cyan-400/30 mt-1">
+                {roleLabel}
+              </span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="w-full mt-2 px-2 py-1.5 text-xs text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors text-center lg:text-left"
+            >
+              <span className="hidden lg:inline">退出登录</span>
+              <span className="lg:hidden" title="退出登录">⏻</span>
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* Main content area */}

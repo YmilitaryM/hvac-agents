@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './contexts/AuthContext';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Equipment from './pages/Equipment';
 import PlantBuilder from './pages/PlantBuilder';
@@ -23,34 +26,45 @@ const queryClient = new QueryClient();
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route element={<ErrorBoundary><Layout /></ErrorBoundary>}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/equipment" element={<Equipment />} />
-            <Route path="/plant" element={<PlantBuilder />} />
-            <Route path="/plant/:id" element={<PlantBuilder />} />
-            <Route path="/environment" element={<Environment />} />
-            <Route path="/simulation" element={<Simulation />} />
-            <Route path="/strategies" element={<Strategies />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/alerts" element={<Alerts />} />
-            <Route path="/override" element={<ManualOverride />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/edges" element={<EdgeDevices />} />
-            <Route path="/workorders" element={<WorkOrders />} />
-            <Route path="/maintenance" element={<Maintenance />} />
-            <Route path="/carbon" element={<CarbonTrading />} />
-            <Route path="*" element={
-              <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400">
-                <h2 className="text-4xl font-bold text-slate-500 mb-2">404</h2>
-                <p>Page not found</p>
-              </div>
-            } />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              element={
+                <ErrorBoundary>
+                  <ProtectedRoute>
+                    <Layout />
+                  </ProtectedRoute>
+                </ErrorBoundary>
+              }
+            >
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/equipment" element={<Equipment />} />
+              <Route path="/plant" element={<PlantBuilder />} />
+              <Route path="/plant/:id" element={<PlantBuilder />} />
+              <Route path="/environment" element={<Environment />} />
+              <Route path="/simulation" element={<Simulation />} />
+              <Route path="/strategies" element={<Strategies />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/alerts" element={<Alerts />} />
+              <Route path="/override" element={<ManualOverride />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/edges" element={<EdgeDevices />} />
+              <Route path="/workorders" element={<WorkOrders />} />
+              <Route path="/maintenance" element={<Maintenance />} />
+              <Route path="/carbon" element={<CarbonTrading />} />
+              <Route path="*" element={
+                <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400">
+                  <h2 className="text-4xl font-bold text-slate-500 mb-2">404</h2>
+                  <p>Page not found</p>
+                </div>
+              } />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
