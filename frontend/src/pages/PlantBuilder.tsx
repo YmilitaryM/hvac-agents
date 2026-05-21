@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { usePlantStore } from '../plant/store';
 import PlantCanvas from '../plant/PlantCanvas';
+import { PropertyPanel } from '../plant/PropertyPanel';
 
 export default function PlantBuilder() {
   const { id } = useParams();
@@ -64,10 +65,7 @@ export default function PlantBuilder() {
             <PlantCanvas />
           )}
         </div>
-        <div className="w-64 bg-slate-800 border-l border-slate-700 p-3 overflow-y-auto shrink-0">
-          <h3 className="text-sm font-semibold text-slate-400 mb-2">属性</h3>
-          <p className="text-xs text-slate-600">选择设备或管段查看属性</p>
-        </div>
+        <PropertyPanel />
       </div>
 
       {/* Pipe table */}
