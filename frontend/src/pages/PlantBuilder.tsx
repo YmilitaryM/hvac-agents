@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { usePlantStore } from '../plant/store';
 import PlantCanvas from '../plant/PlantCanvas';
 import { EquipmentPanel } from '../plant/EquipmentPanel';
 import { PropertyPanel } from '../plant/PropertyPanel';
+import { PipeTable } from '../plant/PipeTable';
 
 export default function PlantBuilder() {
   const { id } = useParams();
@@ -26,6 +27,31 @@ export default function PlantBuilder() {
     }
   }, [plant, id, loadPlantData]);
 
+  const savePlant = useMutation({
+    mutationFn: () => {
+      const state = usePlantStore.getState();
+      const body = {
+        id: state.plantId || undefined,
+        name: state.plantName || '新建制冷站',
+        equipment: state.equipment.map(e => ({
+          id: e.id,
+          name: e.name,
+          type_code: e.type_code,
+          position: e.position,
+        })),
+        pipe_segments: state.pipeSegments,
+      };
+      return fetch('/api/plants/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(r => r.json());
+    },
+    onSuccess: (data) => {
+      usePlantStore.setState({ plantId: data.id, plantName: data.name });
+    },
+  });
+
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 5rem)' }}>
       {/* Toolbar */}
@@ -46,8 +72,12 @@ export default function PlantBuilder() {
         <button className="px-3 py-1.5 bg-slate-700 text-slate-300 rounded text-sm hover:bg-slate-600">
           校验拓扑
         </button>
-        <button className="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-500">
-          保存
+        <button
+          onClick={() => savePlant.mutate()}
+          disabled={savePlant.isPending}
+          className="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-500 disabled:opacity-50"
+        >
+          {savePlant.isPending ? '保存中...' : '保存'}
         </button>
       </div>
 
@@ -64,11 +94,7 @@ export default function PlantBuilder() {
         <PropertyPanel />
       </div>
 
-      {/* Pipe table */}
-      <div className="h-32 bg-slate-800 border-t border-slate-700 p-3 overflow-y-auto shrink-0">
-        <h3 className="text-sm font-semibold text-slate-400 mb-2">管段列表</h3>
-        <p className="text-xs text-slate-600">暂无管段</p>
-      </div>
+      <PipeTable />
     </div>
   );
 }

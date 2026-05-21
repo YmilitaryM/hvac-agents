@@ -1,5 +1,7 @@
+import { useRef, useCallback } from 'react';
+import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid } from '@react-three/drei';
+import { OrbitControls, Grid, TransformControls } from '@react-three/drei';
 import { usePlantStore } from './store';
 import { ChillerModel, PumpModel, CoolingTowerModel, ValveModel, PipeMesh } from './models';
 import { getPointDefs, POINT_COLORS } from './types';
@@ -88,6 +90,35 @@ function PipeLines() {
   );
 }
 
+function SelectedTransform() {
+  const selectedId = usePlantStore(s => s.selectedId);
+  const equipment = usePlantStore(s => s.equipment);
+  const updatePosition = usePlantStore(s => s.updateEquipmentPosition);
+  const meshRef = useRef<THREE.Mesh>(null!);
+
+  const selected = equipment.find(e => e.id === selectedId);
+  if (!selected) return null;
+
+  const handleChange = useCallback(() => {
+    if (meshRef.current) {
+      const p = meshRef.current.position;
+      updatePosition(selected.id, { x: p.x, y: p.y, z: p.z });
+    }
+  }, [selected.id, updatePosition]);
+
+  return (
+    <TransformControls
+      object={meshRef}
+      mode="translate"
+      onChange={handleChange}
+    >
+      <mesh ref={meshRef} position={[selected.position.x, selected.position.y, selected.position.z]} visible={false}>
+        <boxGeometry args={[0.1, 0.1, 0.1]} />
+      </mesh>
+    </TransformControls>
+  );
+}
+
 export default function PlantCanvas() {
   const equipment = usePlantStore(s => s.equipment);
 
@@ -126,6 +157,7 @@ export default function PlantCanvas() {
         ))}
         <PipeLines />
       </group>
+      <SelectedTransform />
       <OrbitControls
         makeDefault
         maxPolarAngle={Math.PI / 2.2}
