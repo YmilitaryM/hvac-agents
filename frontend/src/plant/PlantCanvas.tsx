@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useMemo } from 'react';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, TransformControls, Html } from '@react-three/drei';
@@ -88,11 +88,17 @@ function PipeLines() {
   const selectedId = usePlantStore(s => s.selectedId);
   const setSelection = usePlantStore(s => s.setSelection);
 
+  const eqMap = useMemo(() => {
+    const m = new Map<string, typeof equipment[number]>();
+    for (const eq of equipment) m.set(eq.id, eq);
+    return m;
+  }, [equipment]);
+
   return (
     <group>
       {pipeSegments.map(ps => {
-        const fromEq = equipment.find(e => e.id === ps.from_equipment_id);
-        const toEq = equipment.find(e => e.id === ps.to_equipment_id);
+        const fromEq = eqMap.get(ps.from_equipment_id);
+        const toEq = eqMap.get(ps.to_equipment_id);
         if (!fromEq || !toEq) return null;
         return (
           <PipeMesh
@@ -130,7 +136,7 @@ function SelectedTransform() {
     <TransformControls
       object={meshRef}
       mode="translate"
-      onChange={handleChange}
+      onObjectChange={handleChange}
     >
       <mesh ref={meshRef} position={[selected.position.x, selected.position.y, selected.position.z]} visible={false}>
         <boxGeometry args={[0.1, 0.1, 0.1]} />
