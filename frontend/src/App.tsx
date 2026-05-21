@@ -1,25 +1,27 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Equipment from './pages/Equipment';
-import PlantBuilder from './pages/PlantBuilder';
-import Environment from './pages/Environment';
-import Simulation from './pages/Simulation';
-import Strategies from './pages/Strategies';
-import Reports from './pages/Reports';
-import Alerts from './pages/Alerts';
-import ManualOverride from './pages/ManualOverride';
-import Settings from './pages/Settings';
-import Profile from './pages/Profile';
-import EdgeDevices from './pages/EdgeDevices';
-import WorkOrders from './pages/WorkOrders';
-import Maintenance from './pages/Maintenance';
-import CarbonTrading from './pages/CarbonTrading';
+
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Equipment = lazy(() => import('./pages/Equipment'));
+const PlantBuilder = lazy(() => import('./pages/PlantBuilder'));
+const Environment = lazy(() => import('./pages/Environment'));
+const Simulation = lazy(() => import('./pages/Simulation'));
+const Strategies = lazy(() => import('./pages/Strategies'));
+const Reports = lazy(() => import('./pages/Reports'));
+const Alerts = lazy(() => import('./pages/Alerts'));
+const ManualOverride = lazy(() => import('./pages/ManualOverride'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Profile = lazy(() => import('./pages/Profile'));
+const EdgeDevices = lazy(() => import('./pages/EdgeDevices'));
+const WorkOrders = lazy(() => import('./pages/WorkOrders'));
+const Maintenance = lazy(() => import('./pages/Maintenance'));
+const CarbonTrading = lazy(() => import('./pages/CarbonTrading'));
 
 const queryClient = new QueryClient();
 
@@ -28,6 +30,11 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <BrowserRouter>
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen bg-slate-900">
+              <div className="text-slate-400 text-lg">加载中...</div>
+            </div>
+          }>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -63,6 +70,7 @@ export default function App() {
               } />
             </Route>
           </Routes>
+          </Suspense>
         </BrowserRouter>
       </AuthProvider>
     </QueryClientProvider>
