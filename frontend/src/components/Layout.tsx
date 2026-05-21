@@ -16,6 +16,7 @@ const NAV = [
   { to: '/edges', label: '🖥️ 边缘设备' },
   { to: '/workorders', label: '🔧 工单管理' },
   { to: '/maintenance', label: '🔮 预测维护' },
+  { to: '/carbon', label: '🌱 碳管理' },
 ];
 
 export default function Layout() {

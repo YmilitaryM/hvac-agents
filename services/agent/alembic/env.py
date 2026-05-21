@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from common.config import get_settings
 from common.db import Base
 import agent_service.models  # noqa: F401 — register models
+import agent_service.carbon_models  # noqa: F401 — register carbon models
 
 config = context.config
 if config.config_file_name is not None:

@@ -1,17 +1,5 @@
 from .carbon_market import GenericCarbonMarket
-
-# China regional grid emission factors (tCO2/MWh)
-CEA_REGIONAL_FACTORS = {
-    "north": 0.525,
-    "northeast": 0.554,
-    "east": 0.498,
-    "central": 0.420,
-    "south": 0.389,
-    "northwest": 0.493,
-}
-
-# District cooling industry benchmark (tCO2/GJ of cooling)
-CEA_COOLING_BENCHMARK = 0.065
+from .emission.factor_registry import CEA_REGIONAL_FACTORS, DEFAULT_FACTOR
 
 
 class CEAAdapter(GenericCarbonMarket):
@@ -25,7 +13,7 @@ class CEAAdapter(GenericCarbonMarket):
         period_start,
         period_end,
     ):
-        emission_factor = CEA_REGIONAL_FACTORS.get(region, 0.50)
+        emission_factor = CEA_REGIONAL_FACTORS.get(region, DEFAULT_FACTOR)
         super().__init__(
             region=region,
             carbon_price=carbon_price,
@@ -37,5 +25,5 @@ class CEAAdapter(GenericCarbonMarket):
 
     @staticmethod
     def cooling_allowance(cooling_gj: float) -> float:
-        """Calculate allowance for a given amount of cooling energy (GJ)."""
-        return cooling_gj * CEA_COOLING_BENCHMARK
+        from .emission.factor_registry import FactorRegistry
+        return cooling_gj * FactorRegistry().get_cooling_benchmark()
