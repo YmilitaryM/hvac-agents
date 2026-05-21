@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { usePlantStore } from '../plant/store';
 import PlantCanvas from '../plant/PlantCanvas';
+import { EquipmentPanel } from '../plant/EquipmentPanel';
 import { PropertyPanel } from '../plant/PropertyPanel';
 
 export default function PlantBuilder() {
@@ -52,12 +53,7 @@ export default function PlantBuilder() {
 
       {/* Main area */}
       <div className="flex flex-1 overflow-hidden">
-        {showEquipmentPanel && (
-          <div className="w-56 bg-slate-800 border-r border-slate-700 p-3 overflow-y-auto shrink-0">
-            <h3 className="text-sm font-semibold text-slate-400 mb-2">设备库</h3>
-            <p className="text-xs text-slate-600">从设备管理选择设备</p>
-          </div>
-        )}
+        {showEquipmentPanel && <EquipmentPanel />}
         <div className="flex-1 relative bg-slate-900">
           {isLoading ? (
             <div className="flex items-center justify-center h-full text-slate-400">加载制冷站...</div>
