@@ -27,9 +27,20 @@ SERVICE_ROUTES = {
     "/api/edges": "edgemanager",
     "/api/workorders": "agent",
     "/api/maintenance": "agent",
+    "/api/energy": "energy",
+    "/api/health": "health",
 }
 
-SERVICE_URLS = {}
+SERVICE_URLS = {
+    "asset": "http://asset_service:8000",
+    "environment": "http://env_service:8000",
+    "simulation": "http://sim_service:8000",
+    "agent": "http://agent_service:8000",
+    "acquisition": "http://acquisition_service:8000",
+    "edgemanager": "http://edgemanager_service:8000",
+    "energy": "http://energy_service:8000",
+    "health": "http://health_service:8000",
+}
 
 # Connected WebSocket clients for real-time push
 _ws_clients: set[WebSocket] = set()
