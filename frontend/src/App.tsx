@@ -22,6 +22,16 @@ const EdgeDevices = lazy(() => import('./pages/EdgeDevices'));
 const WorkOrders = lazy(() => import('./pages/WorkOrders'));
 const Maintenance = lazy(() => import('./pages/Maintenance'));
 const CarbonTrading = lazy(() => import('./pages/CarbonTrading'));
+const EnergyDashboard = lazy(() => import('./pages/energy/EnergyDashboard'));
+const EnergyScheduling = lazy(() => import('./pages/energy/EnergyScheduling'));
+const EnergyDemand = lazy(() => import('./pages/energy/EnergyDemand'));
+const EnergyReports = lazy(() => import('./pages/energy/EnergyReports'));
+const EnergyMV = lazy(() => import('./pages/energy/EnergyMV'));
+const HealthDashboard = lazy(() => import('./pages/health/HealthDashboard'));
+const RULPrediction = lazy(() => import('./pages/health/RULPrediction'));
+const FaultDiagnosis = lazy(() => import('./pages/health/FaultDiagnosis'));
+const FMEAKB = lazy(() => import('./pages/health/FMEAKB'));
+const SpectrumAnalysis = lazy(() => import('./pages/health/SpectrumAnalysis'));
 
 const queryClient = new QueryClient();
 
@@ -62,6 +72,16 @@ export default function App() {
               <Route path="/workorders" element={<WorkOrders />} />
               <Route path="/maintenance" element={<Maintenance />} />
               <Route path="/carbon" element={<CarbonTrading />} />
+              <Route path="/energy/dashboard" element={<EnergyDashboard />} />
+              <Route path="/energy/scheduling" element={<EnergyScheduling />} />
+              <Route path="/energy/demand" element={<EnergyDemand />} />
+              <Route path="/energy/reports" element={<EnergyReports />} />
+              <Route path="/energy/mv" element={<EnergyMV />} />
+              <Route path="/health/dashboard" element={<HealthDashboard />} />
+              <Route path="/health/rul" element={<RULPrediction />} />
+              <Route path="/health/diagnosis" element={<FaultDiagnosis />} />
+              <Route path="/health/fmea" element={<FMEAKB />} />
+              <Route path="/health/spectrum" element={<SpectrumAnalysis />} />
               <Route path="*" element={
                 <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400">
                   <h2 className="text-4xl font-bold text-slate-500 mb-2">404</h2>
