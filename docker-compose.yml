@@ -178,6 +178,40 @@ services:
       timeout: 5s
       retries: 5
 
+  # Energy service database (TimescaleDB for time-series)
+  energy_db:
+    image: timescale/timescaledb:2.16-pg16
+    environment:
+      POSTGRES_DB: energy_db
+      POSTGRES_USER: hvac
+      POSTGRES_PASSWORD: hvac_dev
+    ports:
+      - "5440:5432"
+    volumes:
+      - tsdb_energy:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hvac -d energy_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Health service database (PostgreSQL for relational data)
+  health_db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: health_db
+      POSTGRES_USER: hvac
+      POSTGRES_PASSWORD: hvac_dev
+    ports:
+      - "5441:5432"
+    volumes:
+      - pg_health:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hvac -d health_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   mosquitto:
     image: eclipse-mosquitto:2.0
     ports: ["1883:1883", "9001:9001"]
@@ -200,6 +234,36 @@ services:
       mosquitto:
         condition: service_started
 
+  energy_service:
+    build:
+      context: .
+      dockerfile: services/energy/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@energy_db:5432/energy_db
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8008:8000"
+    depends_on:
+      energy_db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  health_service:
+    build:
+      context: .
+      dockerfile: services/health/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+asyncpg://hvac:hvac_dev@health_db:5432/health_db
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8009:8000"
+    depends_on:
+      health_db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
 volumes:
   pg_asset: ~
   tsdb: ~
@@ -208,3 +272,5 @@ volumes:
   tsdb_acq: ~
   pg_edge: ~
   mosquitto_data: ~
+  tsdb_energy: ~
+  pg_health: ~
