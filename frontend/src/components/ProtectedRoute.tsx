@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import type { ReactNode } from 'react';
 
@@ -9,6 +9,7 @@ interface ProtectedRouteProps {
 
 export default function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
   const { token, user, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -19,7 +20,8 @@ export default function ProtectedRoute({ children, roles }: ProtectedRouteProps)
   }
 
   if (!token) {
-    return <Navigate to="/login" replace />;
+    if (location.pathname === '/login') return null;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   if (roles && roles.length > 0 && user && !roles.includes(user.role)) {

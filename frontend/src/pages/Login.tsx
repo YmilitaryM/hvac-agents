@@ -1,10 +1,12 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function Login() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string })?.from || '/';
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -26,7 +28,7 @@ export default function Login() {
       } else {
         await login(username, password);
       }
-      navigate('/', { replace: true });
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : '操作失败，请重试');
     } finally {
@@ -88,9 +90,6 @@ export default function Login() {
               >
                 <option value="viewer">查看者</option>
                 <option value="operator">操作员</option>
-                <option value="engineer">工程师</option>
-                <option value="admin">管理员</option>
-                <option value="auditor">审计员</option>
               </select>
             </div>
           )}
