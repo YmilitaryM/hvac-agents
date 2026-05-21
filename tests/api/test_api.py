@@ -4,6 +4,8 @@ from src.api.main import create_app
 import src.api.monitoring as monitoring_mod
 import src.api.strategy as strategy_mod
 import src.api.reports as reports_mod
+import src.api.plants as plants_mod
+import src.api.equipment as equipment_mod
 
 
 @pytest.fixture
@@ -21,6 +23,8 @@ def reset_in_memory_state():
     strategy_mod._strategies.clear()
     strategy_mod._strategy_history.clear()
     reports_mod._reports.clear()
+    plants_mod._plants.clear()
+    equipment_mod._equipment.clear()
 
 
 class TestHealthAndStatus:
@@ -162,3 +166,197 @@ class TestReports:
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["available_dates"]) == 2
+
+
+class TestPlants:
+    def test_list_plants_empty(self, client):
+        resp = client.get("/api/plants/")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["plants"] == []
+
+    def test_create_and_get_plant(self, client):
+        plant = {
+            "name": "测试制冷站",
+            "equipment": [
+                {"id": "eq-1", "name": "冷水机组-1", "type_code": "centrifugal_chiller", "position": {"x": 0, "y": 0, "z": 0}, "design_params": {}},
+            ],
+            "pipe_segments": [],
+        }
+        resp = client.post("/api/plants/", json=plant)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "id" in data
+        plant_id = data["id"]
+
+        resp = client.get(f"/api/plants/{plant_id}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "测试制冷站"
+        assert len(data["equipment"]) == 1
+
+    def test_create_plant_generates_id(self, client):
+        resp = client.post("/api/plants/", json={"name": "auto-id"})
+        assert resp.status_code == 200
+        assert len(resp.json()["id"]) == 16
+
+    def test_list_plants_with_data(self, client):
+        client.post("/api/plants/", json={"name": "Plant A"})
+        client.post("/api/plants/", json={"name": "Plant B"})
+        resp = client.get("/api/plants/")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["plants"]) == 2
+
+    def test_get_nonexistent_plant(self, client):
+        resp = client.get("/api/plants/nonexistent")
+        assert resp.status_code == 404
+
+    def test_update_plant(self, client):
+        resp = client.post("/api/plants/", json={"name": "original"})
+        plant_id = resp.json()["id"]
+
+        resp = client.put(f"/api/plants/{plant_id}", json={
+            "name": "updated",
+            "equipment": [{"id": "eq-2", "name": "pump", "type_code": "pump", "position": {"x": 1, "y": 0, "z": 0}, "design_params": {}}],
+            "pipe_segments": [],
+        })
+        assert resp.status_code == 200
+
+        resp = client.get(f"/api/plants/{plant_id}")
+        assert resp.json()["name"] == "updated"
+        assert len(resp.json()["equipment"]) == 1
+
+    def test_update_nonexistent_plant_upserts(self, client):
+        resp = client.put("/api/plants/new-plant", json={"name": "upserted"})
+        assert resp.status_code == 200
+        assert resp.json()["id"] == "new-plant"
+
+    def test_delete_plant(self, client):
+        resp = client.post("/api/plants/", json={"name": "to-delete"})
+        plant_id = resp.json()["id"]
+
+        resp = client.delete(f"/api/plants/{plant_id}")
+        assert resp.status_code == 200
+
+        resp = client.get(f"/api/plants/{plant_id}")
+        assert resp.status_code == 404
+
+    def test_delete_nonexistent_plant(self, client):
+        resp = client.delete("/api/plants/nonexistent")
+        assert resp.status_code == 404
+
+    def test_list_templates(self, client):
+        resp = client.get("/api/plants/templates")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["templates"]) >= 1
+        template_ids = [t["id"] for t in data["templates"]]
+        assert "primary_variable_flow" in template_ids
+
+    def test_create_plant_from_template(self, client):
+        resp = client.post("/api/plants/", json={
+            "name": "模板制冷站",
+            "template_id": "primary_variable_flow",
+            "N": 2,
+            "standby": 1,
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "模板制冷站"
+        assert len(data["equipment"]) > 0
+        assert len(data["pipe_segments"]) > 0
+
+    def test_create_plant_from_nonexistent_template(self, client):
+        resp = client.post("/api/plants/", json={
+            "name": "bad",
+            "template_id": "no_such_template",
+        })
+        assert resp.status_code == 404
+
+    def test_save_and_load_pipe_segments(self, client):
+        plant = {
+            "name": "pipe-test",
+            "equipment": [
+                {"id": "e1", "name": "chiller", "type_code": "centrifugal_chiller", "position": {"x": 0, "y": 0, "z": 0}, "design_params": {}},
+                {"id": "e2", "name": "pump", "type_code": "pump", "position": {"x": 6, "y": 0, "z": 0}, "design_params": {}},
+            ],
+            "pipe_segments": [
+                {
+                    "id": "pipe-1",
+                    "from_equipment_id": "e2",
+                    "from_point_code": "outlet_pressure",
+                    "to_equipment_id": "e1",
+                    "to_point_code": "chw_supply_temp",
+                    "diameter_mm": 200,
+                    "length_m": 6.0,
+                    "waypoints": [],
+                }
+            ],
+        }
+        resp = client.post("/api/plants/", json=plant)
+        plant_id = resp.json()["id"]
+
+        resp = client.get(f"/api/plants/{plant_id}")
+        data = resp.json()
+        assert len(data["pipe_segments"]) == 1
+        assert data["pipe_segments"][0]["diameter_mm"] == 200
+
+
+class TestEquipment:
+    def test_list_equipment_empty_after_reset(self, client):
+        resp = client.get("/api/equipment/")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["equipment"] == []
+
+    def test_create_and_list_equipment(self, client):
+        eq = {
+            "name": "测试冷水机",
+            "type_code": "centrifugal_chiller",
+            "design_params": {"capacity_rt": 500},
+        }
+        resp = client.post("/api/equipment/", json=eq)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "测试冷水机"
+        assert data["type_code"] == "centrifugal_chiller"
+
+        resp = client.get("/api/equipment/")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["equipment"]) == 1
+
+    def test_create_equipment_with_equipment_type_id(self, client):
+        """Frontend sends equipment_type_id, backend should map to type_code."""
+        eq = {
+            "name": "test",
+            "equipment_type_id": "pump",
+        }
+        resp = client.post("/api/equipment/", json=eq)
+        assert resp.status_code == 200
+        assert resp.json()["type_code"] == "pump"
+
+    def test_list_equipment_filter_by_plant_id(self, client):
+        client.post("/api/equipment/", json={"name": "free", "type_code": "pump"})
+        client.post("/api/equipment/", json={"name": "assigned", "type_code": "pump", "plant_id": "plant-1"})
+
+        resp = client.get("/api/equipment/")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["equipment"]) == 1
+        assert data["equipment"][0]["name"] == "free"
+
+    def test_delete_equipment(self, client):
+        resp = client.post("/api/equipment/", json={"name": "to-delete", "type_code": "pump"})
+        eq_id = resp.json()["id"]
+
+        resp = client.delete(f"/api/equipment/{eq_id}")
+        assert resp.status_code == 200
+
+        resp = client.get("/api/equipment/")
+        assert len(resp.json()["equipment"]) == 0
+
+    def test_delete_nonexistent_equipment(self, client):
+        resp = client.delete("/api/equipment/nonexistent")
+        assert resp.status_code == 404
