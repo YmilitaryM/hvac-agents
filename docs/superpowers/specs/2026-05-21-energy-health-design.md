@@ -98,7 +98,6 @@ All endpoints mounted under `/api/energy/` via gateway proxy.
 | GB/T 13234-2018 | Energy savings calculation — overall method and measure method (equiv. ISO 50047) |
 | GB/T 28750-2012 | M&V plan design and uncertainty analysis (under revision) |
 | GB/T 2589-2020 | Comprehensive energy calculation, coal-equivalent conversion |
-| DB11/T 1617-2025 | Beijing local standard — cooling energy intensity limits by building type |
 
 ### 3.5 Frontend Pages
 
