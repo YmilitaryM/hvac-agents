@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { usePlantStore } from '../plant/store';
+import PlantCanvas from '../plant/PlantCanvas';
 
 export default function PlantBuilder() {
   const { id } = useParams();
@@ -60,7 +61,7 @@ export default function PlantBuilder() {
           {isLoading ? (
             <div className="flex items-center justify-center h-full text-slate-400">加载制冷站...</div>
           ) : (
-            <div className="flex items-center justify-center h-full text-slate-600">3D 画布</div>
+            <PlantCanvas />
           )}
         </div>
         <div className="w-64 bg-slate-800 border-l border-slate-700 p-3 overflow-y-auto shrink-0">
