@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from .api import dashboard, equipment_detail, rul, diagnosis, fmea, vibration, oil, validation
+from .api import dashboard, equipment_detail, rul, diagnosis, fmea, vibration, oil, validation, excel_io
 
 
 app = FastAPI(title="Health Service", version="0.1.0")
@@ -13,6 +13,7 @@ app.include_router(fmea.router, prefix="/api/health", tags=["FMEA"])
 app.include_router(vibration.router, prefix="/api/health", tags=["Vibration"])
 app.include_router(oil.router, prefix="/api/health", tags=["Oil Analysis"])
 app.include_router(validation.router, prefix="/api/health", tags=["Validation"])
+app.include_router(excel_io.router, prefix="/api/health", tags=["Excel Import/Export"])
 
 
 @app.get("/health")
