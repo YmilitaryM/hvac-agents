@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../api/client';
 
@@ -12,16 +13,6 @@ interface OverrideEntry {
   expires_at: number;
   active: boolean;
 }
-
-const OVERRIDE_LABELS: Record<string, string> = {
-  setpoint: '设定点',
-  chiller_on: '冷机开启',
-  chiller_off: '冷机关闭',
-  pump_speed: '水泵转速',
-  tower_fan: '冷却塔风扇',
-  valve_position: '阀门开度',
-  strategy_switch: '策略切换',
-};
 
 async function fetchOverrides(activeOnly: boolean): Promise<{ overrides: OverrideEntry[] }> {
   const resp = await apiClient.get(`/api/override?active_only=${activeOnly}`);
@@ -48,6 +39,7 @@ async function revertOverride(overrideId: string): Promise<void> {
 }
 
 export default function ManualOverride() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -57,6 +49,16 @@ export default function ManualOverride() {
     reason: '',
     timeout_minutes: 30,
   });
+
+  const OVERRIDE_LABELS: Record<string, string> = {
+    setpoint: t('override.setpoint'),
+    chiller_on: t('override.chillerOn'),
+    chiller_off: t('override.chillerOff'),
+    pump_speed: t('override.pumpSpeed'),
+    tower_fan: t('override.towerFan'),
+    valve_position: t('override.valvePosition'),
+    strategy_switch: t('override.strategySwitch'),
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['overrides'],
@@ -87,12 +89,12 @@ export default function ManualOverride() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">手动干预</h2>
+        <h2 className="text-xl font-bold">{t('override.title')}</h2>
         <button
           onClick={() => setShowForm(v => !v)}
           className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm"
         >
-          {showForm ? '取消' : '+ 新建干预'}
+          {showForm ? t('common.cancel') : t('override.newOverride')}
         </button>
       </div>
 
@@ -100,16 +102,16 @@ export default function ManualOverride() {
         <div className="bg-slate-800 border border-slate-700 rounded-lg p-4 mb-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">设备ID</label>
+              <label className="block text-sm text-slate-400 mb-1">{t('override.deviceId')}</label>
               <input
                 className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm"
-                placeholder="例如 CH-1"
+                placeholder={t('override.placeholderDeviceId')}
                 value={form.device_id}
                 onChange={e => setForm(f => ({ ...f, device_id: e.target.value }))}
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">干预类型</label>
+              <label className="block text-sm text-slate-400 mb-1">{t('override.overrideType')}</label>
               <select
                 className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm"
                 value={form.override_type}
@@ -121,7 +123,7 @@ export default function ManualOverride() {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">设定值</label>
+              <label className="block text-sm text-slate-400 mb-1">{t('override.setpointValue')}</label>
               <input
                 type="number"
                 className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm"
@@ -130,7 +132,7 @@ export default function ManualOverride() {
               />
             </div>
             <div>
-              <label className="block text-sm text-slate-400 mb-1">自动恢复 (分钟)</label>
+              <label className="block text-sm text-slate-400 mb-1">{t('override.autoRestore')}</label>
               <input
                 type="number"
                 className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm"
@@ -139,10 +141,10 @@ export default function ManualOverride() {
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm text-slate-400 mb-1">原因</label>
+              <label className="block text-sm text-slate-400 mb-1">{t('override.reason')}</label>
               <input
                 className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm"
-                placeholder="手动干预原因..."
+                placeholder={t('override.reasonPlaceholder')}
                 value={form.reason}
                 onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
               />
@@ -153,15 +155,15 @@ export default function ManualOverride() {
             disabled={!form.device_id || createMut.isPending}
             className="mt-4 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white px-4 py-2 rounded text-sm"
           >
-            {createMut.isPending ? '提交中...' : '确认干预'}
+            {createMut.isPending ? t('common.submitting') : t('override.confirmOverride')}
           </button>
         </div>
       )}
 
       {isLoading ? (
-        <div className="text-slate-400">加载中...</div>
+        <div className="text-slate-400">{t('common.loading')}</div>
       ) : overrides.length === 0 ? (
-        <div className="text-slate-500 text-center py-12">暂无活跃干预</div>
+        <div className="text-slate-500 text-center py-12">{t('common.noActiveOverrides')}</div>
       ) : (
         <div className="space-y-2">
           {overrides.map((o: OverrideEntry) => (
@@ -175,16 +177,16 @@ export default function ManualOverride() {
                   <span className="text-xs bg-blue-700 text-blue-200 px-2 py-0.5 rounded">
                     {OVERRIDE_LABELS[o.override_type] || o.override_type}
                   </span>
-                  <span className="text-sm text-slate-400">→ {o.value}</span>
+                  <span className="text-sm text-slate-400">&rarr; {o.value}</span>
                 </div>
                 {o.reason && (
-                  <div className="text-xs text-slate-500 mt-1">原因: {o.reason}</div>
+                  <div className="text-xs text-slate-500 mt-1">{t('override.reason')}: {o.reason}</div>
                 )}
                 <div className="text-xs text-slate-500 mt-1">
-                  创建: {new Date(o.created_at * 1000).toLocaleString()}
+                  {t('override.created')}: {new Date(o.created_at * 1000).toLocaleString()}
                   {o.expires_at < 1e12 && (
                     <span className="ml-3">
-                      到期: {new Date(o.expires_at * 1000).toLocaleString()}
+                      {t('override.expires')}: {new Date(o.expires_at * 1000).toLocaleString()}
                     </span>
                   )}
                 </div>
@@ -194,13 +196,13 @@ export default function ManualOverride() {
                   onClick={() => revertMut.mutate(o.override_id)}
                   className="text-xs bg-yellow-700 hover:bg-yellow-600 px-3 py-1 rounded"
                 >
-                  恢复
+                  {t('override.restore')}
                 </button>
                 <button
                   onClick={() => cancelMut.mutate(o.override_id)}
                   className="text-xs bg-red-700 hover:bg-red-600 px-3 py-1 rounded"
                 >
-                  取消
+                  {t('override.cancel')}
                 </button>
               </div>
             </div>

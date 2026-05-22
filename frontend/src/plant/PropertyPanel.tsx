@@ -1,7 +1,7 @@
 import { usePlantStore } from './store';
 import { getEquipmentTraits, getDisplayPoints, getControlPoints } from './types';
 
-export function PropertyPanel() {
+export function PropertyPanel({ className }: { className?: string }) {
   const selectedId = usePlantStore(s => s.selectedId);
   const equipment = usePlantStore(s => s.equipment);
   const pipeSegments = usePlantStore(s => s.pipeSegments);
@@ -12,7 +12,7 @@ export function PropertyPanel() {
 
   if (!selectedId) {
     return (
-      <div className="w-64 bg-slate-800 border-l border-slate-700 p-3 overflow-y-auto shrink-0">
+      <div className={`bg-slate-800 border-l border-slate-700 p-3 overflow-y-auto shrink-0 ${className || 'w-64'}`}>
         <h3 className="text-sm font-semibold text-slate-400 mb-2">属性</h3>
         <p className="text-xs text-slate-600">选择设备或管段查看属性</p>
       </div>
@@ -25,7 +25,7 @@ export function PropertyPanel() {
     const controlPoints = getControlPoints(selectedEquipment.type_code);
 
     return (
-      <div className="w-64 bg-slate-800 border-l border-slate-700 overflow-y-auto shrink-0">
+      <div className={`bg-slate-800 border-l border-slate-700 overflow-y-auto shrink-0 ${className || 'w-64'}`}>
         <div className="p-3 border-b border-slate-700">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: traits.color }} />
@@ -91,7 +91,7 @@ export function PropertyPanel() {
     const toEq = equipment.find(e => e.id === selectedPipe.to_equipment_id);
 
     return (
-      <div className="w-64 bg-slate-800 border-l border-slate-700 overflow-y-auto shrink-0">
+      <div className={`bg-slate-800 border-l border-slate-700 overflow-y-auto shrink-0 ${className || 'w-64'}`}>
         <div className="p-3 border-b border-slate-700">
           <h3 className="text-sm font-semibold text-slate-200">管段</h3>
           <p className="text-xs text-slate-500 mt-1 font-mono">{selectedPipe.id}</p>

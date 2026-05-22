@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import String, Boolean, DateTime, JSON, Text, Integer
+from sqlalchemy import String, Boolean, DateTime, JSON, Text, Integer, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from typing import Optional
 
@@ -15,6 +15,10 @@ class UserModel(Base):
     hashed_password: Mapped[str] = mapped_column(String(256))
     role: Mapped[str] = mapped_column(String(16), default="viewer")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False, index=True, default=1,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 

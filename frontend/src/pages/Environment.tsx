@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 
 interface WeatherRow {
@@ -27,6 +28,7 @@ function generateTmySample(): WeatherRow[] {
 const TMY_SAMPLE = generateTmySample();
 
 export default function Environment() {
+  const { t } = useTranslation();
   const [tmyView, setTmyView] = useState(false);
   const [priceTab, setPriceTab] = useState<'peak' | 'flat' | 'valley'>('peak');
 
@@ -35,19 +37,24 @@ export default function Environment() {
     queryFn: () => fetch('/api/env').then(r => r.json()),
   });
 
+  const PRICE_TABS: Record<string, string> = {
+    peak: t('environment.peak'),
+    flat: t('environment.flat'),
+    valley: t('environment.valley'),
+  };
+
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">环境配置</h2>
+      <h2 className="text-xl font-bold mb-4">{t('environment.title')}</h2>
 
-      {/* Weather / TMY Section */}
       <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium">气象数据 (TMY)</h3>
+          <h3 className="font-medium">{t('environment.weatherData')}</h3>
           <button
             onClick={() => setTmyView(!tmyView)}
             className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded"
           >
-            {tmyView ? '隐藏' : '查看典型年数据'}
+            {tmyView ? t('environment.hide') : t('environment.viewTMY')}
           </button>
         </div>
         {tmyView && (
@@ -55,10 +62,10 @@ export default function Environment() {
             <table className="w-full text-sm">
               <thead className="text-slate-400">
                 <tr>
-                  <th className="text-left py-1">小时</th>
-                  <th className="text-left py-1">月</th>
-                  <th className="text-left py-1">干球温度 (°C)</th>
-                  <th className="text-left py-1">湿球温度 (°C)</th>
+                  <th className="text-left py-1">{t('environment.hour')}</th>
+                  <th className="text-left py-1">{t('environment.month')}</th>
+                  <th className="text-left py-1">{t('environment.dbTemp')}</th>
+                  <th className="text-left py-1">{t('environment.wbTemp')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -76,9 +83,8 @@ export default function Environment() {
         )}
       </div>
 
-      {/* Electricity Price */}
       <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-4">
-        <h3 className="font-medium mb-3">电价设置 (元/kWh)</h3>
+        <h3 className="font-medium mb-3">{t('environment.electricityPrice')}</h3>
         <div className="flex gap-2 mb-3">
           {(['peak', 'flat', 'valley'] as const).map(tab => (
             <button
@@ -88,40 +94,39 @@ export default function Environment() {
                 priceTab === tab ? 'bg-cyan-600 text-white' : 'bg-slate-700 text-slate-300'
               }`}
             >
-              {{ peak: '尖峰', flat: '平段', valley: '低谷' }[tab]}
+              {PRICE_TABS[tab]}
             </button>
           ))}
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-slate-700 rounded p-3 text-center">
-            <div className="text-xs text-slate-400">尖峰 (10:00-12:00, 14:00-17:00)</div>
+            <div className="text-xs text-slate-400">{t('environment.peakTime')}</div>
             <div className="text-lg font-bold text-yellow-400">1.20</div>
           </div>
           <div className="bg-slate-700 rounded p-3 text-center">
-            <div className="text-xs text-slate-400">平段 (7:00-10:00, 12:00-14:00, 17:00-22:00)</div>
+            <div className="text-xs text-slate-400">{t('environment.flatTime')}</div>
             <div className="text-lg font-bold text-blue-400">0.75</div>
           </div>
           <div className="bg-slate-700 rounded p-3 text-center">
-            <div className="text-xs text-slate-400">低谷 (22:00-7:00)</div>
+            <div className="text-xs text-slate-400">{t('environment.valleyTime')}</div>
             <div className="text-lg font-bold text-green-400">0.35</div>
           </div>
         </div>
       </div>
 
-      {/* Building Parameters */}
       <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
-        <h3 className="font-medium mb-3">建筑模型参数</h3>
+        <h3 className="font-medium mb-3">{t('environment.buildingParams')}</h3>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
-            ['建筑面积 (m²)', '50,000'],
-            ['窗墙比', '0.35'],
-            ['围护结构传热系数 (W/m²·K)', '0.45'],
-            ['人员密度 (人/m²)', '0.10'],
-            ['照明功率密度 (W/m²)', '9.0'],
-            ['设备功率密度 (W/m²)', '15.0'],
-            ['新风量 (m³/h·人)', '30'],
-            ['室内设计温度 (°C)', '26'],
-            ['室内设计湿度 (%)', '55'],
+            [t('environment.buildingArea'), '50,000'],
+            [t('environment.windowWallRatio'), '0.35'],
+            [t('environment.heatTransferCoeff'), '0.45'],
+            [t('environment.personDensity'), '0.10'],
+            [t('environment.lightingDensity'), '9.0'],
+            [t('environment.equipmentDensity'), '15.0'],
+            [t('environment.freshAir'), '30'],
+            [t('environment.indoorTemp'), '26'],
+            [t('environment.indoorHumidity'), '55'],
           ].map(([label, value]) => (
             <div key={label} className="bg-slate-700 rounded p-3">
               <div className="text-xs text-slate-400">{label}</div>

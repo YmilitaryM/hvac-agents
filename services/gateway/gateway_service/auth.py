@@ -1,12 +1,19 @@
 from fastapi import APIRouter, HTTPException, Request
-from passlib.context import CryptContext
+import bcrypt
 from sqlalchemy import select
 
 from common.auth import create_token, Role
 from .models import UserModel
 
 router = APIRouter()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def verify_password(password: str, hashed: str) -> bool:
+    return bcrypt.checkpw(password.encode(), hashed.encode())
 
 
 @router.post("/auth/register")
@@ -19,7 +26,7 @@ async def register(data: dict, request: Request):
             raise HTTPException(409, "Username already exists")
         user = UserModel(
             username=data["username"],
-            hashed_password=pwd_context.hash(data["password"]),
+            hashed_password=hash_password(data["password"]),
             role=data.get("role", "viewer"),
         )
         session.add(user)
@@ -34,7 +41,7 @@ async def login(data: dict, request: Request):
             select(UserModel).where(UserModel.username == data["username"])
         )
         user = result.scalar_one_or_none()
-        if not user or not pwd_context.verify(data["password"], user.hashed_password):
+        if not user or not verify_password(data["password"], user.hashed_password):
             raise HTTPException(401, "Invalid credentials")
         if not user.is_active:
             raise HTTPException(403, "Account disabled")

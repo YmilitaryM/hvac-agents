@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchAlerts, acknowledgeAlert } from '../api/monitoring';
 
@@ -9,6 +10,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 export default function Alerts() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<{ severity?: string; ack?: boolean }>({});
 
@@ -28,17 +30,17 @@ export default function Alerts() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">告警</h2>
+        <h2 className="text-xl font-bold">{t('alerts.title')}</h2>
         <div className="flex gap-2">
           <select
             className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm"
             value={filter.severity || ''}
             onChange={e => setFilter(f => ({ ...f, severity: e.target.value || undefined }))}
           >
-            <option value="">全部级别</option>
-            <option value="critical">严重</option>
-            <option value="warning">警告</option>
-            <option value="info">信息</option>
+            <option value="">{t('alerts.allLevels')}</option>
+            <option value="critical">{t('alerts.critical')}</option>
+            <option value="warning">{t('alerts.warning')}</option>
+            <option value="info">{t('alerts.info')}</option>
           </select>
           <select
             className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm"
@@ -48,17 +50,17 @@ export default function Alerts() {
               setFilter(f => ({ ...f, ack: v === '' ? undefined : v === 'true' }));
             }}
           >
-            <option value="">全部状态</option>
-            <option value="false">未确认</option>
-            <option value="true">已确认</option>
+            <option value="">{t('alerts.allStatus')}</option>
+            <option value="false">{t('alerts.unacknowledged')}</option>
+            <option value="true">{t('alerts.acknowledged')}</option>
           </select>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="text-slate-400">加载中...</div>
+        <div className="text-slate-400">{t('common.loading')}</div>
       ) : alerts.length === 0 ? (
-        <div className="text-slate-500 text-center py-12">暂无告警</div>
+        <div className="text-slate-500 text-center py-12">{t('alerts.noAlerts')}</div>
       ) : (
         <div className="space-y-2">
           {alerts.map((a: any) => (
@@ -75,7 +77,7 @@ export default function Alerts() {
                 <div>
                   <div className="font-medium">{a.message || a.rule_name}</div>
                   <div className="text-xs text-slate-400 mt-1">
-                    {a.device_id && <span className="mr-3">设备: {a.device_id}</span>}
+                    {a.device_id && <span className="mr-3">{t('alerts.device')}: {a.device_id}</span>}
                     <span>{new Date(a.timestamp || a.created_at).toLocaleString()}</span>
                   </div>
                 </div>
@@ -85,7 +87,7 @@ export default function Alerts() {
                   onClick={() => ackMut.mutate(a.id)}
                   className="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded shrink-0"
                 >
-                  确认
+                  {t('alerts.acknowledge')}
                 </button>
               )}
             </div>

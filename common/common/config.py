@@ -15,7 +15,11 @@ class Settings(BaseSettings):
     agent_service_url: str = "http://localhost:8004"
     acquisition_service_url: str = "http://localhost:8005"
     edgemanager_service_url: str = "http://localhost:8006"
+    energy_service_url: str = "http://localhost:8008"
+    health_service_url: str = "http://localhost:8009"
     acq_database_url: str = "postgresql+asyncpg://hvac:hvac_dev@localhost:5438/acq_db"
+    energy_database_url: str = "postgresql+asyncpg://hvac:hvac_dev@localhost:5440/energy_db"
+    health_database_url: str = "postgresql+asyncpg://hvac:hvac_dev@localhost:5441/health_db"
 
     model_config = {"env_file": ".env"}
 

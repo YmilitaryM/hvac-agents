@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from common.db import create_engine, create_session_factory, Base
 from common.metrics import MetricsMiddleware, metrics_endpoint
 
-from .api import monitoring, strategies, reports, alerts, prediction, benchmarking, rl, dispatch, carbon as carbon_api
+from .api import monitoring, strategies, reports, alerts, prediction, benchmarking, rl, dispatch, carbon as carbon_api, alarms_isa, calibration as calibration_api
 from .predictive_maintenance.api.maintenance import router as maintenance_router
 from .workorder.api.workorders import router as workorder_router
 from .api import override as _override
@@ -68,6 +68,7 @@ app.include_router(monitoring.router, prefix="/api/monitoring", tags=["Monitorin
 app.include_router(strategies.router, prefix="/api/strategies", tags=["Strategies"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
+app.include_router(alarms_isa.router, prefix="/api/alarms", tags=["Alarms:ISA-18.2"])
 app.include_router(prediction.router, prefix="/api/prediction", tags=["Prediction"])
 app.include_router(benchmarking.router, prefix="/api/benchmarking", tags=["Benchmarking"])
 app.include_router(rl.router, prefix="/api/rl", tags=["RL"])
@@ -77,6 +78,8 @@ app.include_router(carbon_api.holdings, prefix="/api/carbon/holdings", tags=["Ca
 app.include_router(carbon_api.trading, prefix="/api/carbon/trading", tags=["Carbon:Trading"])
 app.include_router(carbon_api.compliance, prefix="/api/carbon/compliance", tags=["Carbon:Compliance"])
 app.include_router(carbon_api.market_api, prefix="/api/carbon/market", tags=["Carbon:Market"])
+
+app.include_router(calibration_api.router, prefix="/api", tags=["Calibration"])
 
 app.include_router(_override.router, prefix="/api", tags=["Override"])
 

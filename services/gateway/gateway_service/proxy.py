@@ -27,9 +27,20 @@ SERVICE_ROUTES = {
     "/api/edges": "edgemanager",
     "/api/workorders": "agent",
     "/api/maintenance": "agent",
+    "/api/energy": "energy",
+    "/api/health": "health",
 }
 
-SERVICE_URLS = {}
+SERVICE_URLS = {
+    "asset": "http://asset_service:8000",
+    "environment": "http://env_service:8000",
+    "simulation": "http://sim_service:8000",
+    "agent": "http://agent_service:8000",
+    "acquisition": "http://acquisition_service:8000",
+    "edgemanager": "http://edgemanager_service:8000",
+    "energy": "http://energy_service:8000",
+    "health": "http://health_service:8000",
+}
 
 # Connected WebSocket clients for real-time push
 _ws_clients: set[WebSocket] = set()
@@ -73,6 +84,25 @@ def get_backend(path: str) -> str | None:
     return None
 
 
+def _resolve_tenant_id(request: Request) -> int:
+    """Resolve tenant_id for the current request.
+
+    MVP strategy: try JWT first, fall back to default tenant 1.
+    Future: look up user.tenant_id from the users table.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        try:
+            from common.auth import decode_token
+            claims = decode_token(auth_header[7:])
+            # Future: query user.tenant_id from DB
+            # For now every user belongs to tenant 1
+            return 1
+        except Exception:
+            pass
+    return 1  # MVP default
+
+
 async def proxy_request(request: Request):
     backend = get_backend(request.url.path)
     if not backend:
@@ -87,6 +117,10 @@ async def proxy_request(request: Request):
         val = request.headers.get(key)
         if val:
             headers[key] = val
+
+    # Resolve tenant_id from JWT (MVP: default to 1)
+    tenant_id = _resolve_tenant_id(request)
+    headers["x-tenant-id"] = str(tenant_id)
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:

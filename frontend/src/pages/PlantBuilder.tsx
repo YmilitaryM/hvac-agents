@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { usePlantStore } from '../plant/store';
@@ -7,8 +8,14 @@ import { EquipmentPanel } from '../plant/EquipmentPanel';
 import { PropertyPanel } from '../plant/PropertyPanel';
 import { PipeTable } from '../plant/PipeTable';
 import { validateTopology, type ValidationIssue } from '../plant/validateTopology';
+import { useKeyboardShortcuts } from '../plant/useKeyboardShortcuts';
+import { useSensorDataSubscription } from '../plant/useSensorDataSubscription';
+import { useMediaQuery } from '../hooks/useMediaQuery';
+import { useCollaboration } from '../plant/useCollaboration';
+import BottomSheet from '../components/BottomSheet';
 
 export default function PlantBuilder() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const loadPlantData = usePlantStore(s => s.loadPlantData);
   const plantName = usePlantStore(s => s.plantName);
@@ -16,9 +23,19 @@ export default function PlantBuilder() {
   const pipeSegments = usePlantStore(s => s.pipeSegments);
   const equipmentCount = equipment.length;
   const pipeCount = pipeSegments.length;
+  const selectedId = usePlantStore(s => s.selectedId);
   const setSelection = usePlantStore(s => s.setSelection);
+  const pastCount = usePlantStore(s => s.past.length);
+  const futureCount = usePlantStore(s => s.future.length);
+  const undo = usePlantStore(s => s.undo);
+  const redo = usePlantStore(s => s.redo);
+  useKeyboardShortcuts();
+  useSensorDataSubscription();
+  const { remoteCount } = useCollaboration(id);
   const [showEquipmentPanel, setShowEquipmentPanel] = useState(false);
+  const [showFlow, setShowFlow] = useState(true);
   const [validationIssues, setValidationIssues] = useState<ValidationIssue[] | null>(null);
+  const isMobile = !useMediaQuery('(min-width: 768px)');
 
   const { data: plant, isLoading, isError } = useQuery({
     queryKey: ['plant', id],
@@ -42,7 +59,7 @@ export default function PlantBuilder() {
       const state = usePlantStore.getState();
       const body = {
         id: state.plantId || undefined,
-        name: state.plantName || '新建制冷站',
+        name: state.plantName || t('plantBuilder.newPlant'),
         equipment: state.equipment.map(e => ({
           id: e.id,
           name: e.name,
@@ -59,7 +76,7 @@ export default function PlantBuilder() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }).then(r => {
-        if (!r.ok) throw new Error(`保存失败: ${r.status}`);
+        if (!r.ok) throw new Error(`${t('plantBuilder.saveFailed')}: ${r.status}`);
         return r.json();
       });
     },
@@ -67,57 +84,83 @@ export default function PlantBuilder() {
       usePlantStore.setState({ plantId: data.id, plantName: data.name });
     },
     onError: (err) => {
-      console.error('保存失败:', err);
+      console.error(t('plantBuilder.saveError'), err);
     },
   });
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 5rem)' }}>
-      {/* Toolbar */}
-      <div className="flex items-center gap-3 px-4 py-2 bg-slate-800 border-b border-slate-700 shrink-0">
-        <h2 className="text-lg font-bold text-slate-100">
-          {id ? `制冷站: ${plantName || id}` : '制冷站构建'}
+      <div className="flex items-center gap-1 md:gap-3 px-2 md:px-4 py-2 bg-slate-800 border-b border-slate-700 shrink-0">
+        <h2 className="text-sm md:text-lg font-bold text-slate-100 truncate max-w-[120px] md:max-w-none">
+          {id ? `${t('plantBuilder.plantLabel')}: ${plantName || id}` : t('plantBuilder.title')}
         </h2>
-        <span className="text-xs text-slate-500">
-          {equipmentCount} 设备 | {pipeCount} 管段
+        <span className="text-[10px] md:text-xs text-slate-500 hidden sm:inline">
+          {equipmentCount} {t('plantBuilder.equipmentCount')} | {pipeCount} {t('plantBuilder.pipeCount')}
         </span>
+        {remoteCount > 0 && (
+          <span className="text-[10px] md:text-xs text-green-400 hidden sm:inline" title={t('plantBuilder.onlineCollab')}>
+            &middot; {remoteCount + 1} {t('plantBuilder.onlineCollab')}
+          </span>
+        )}
         <div className="flex-1" />
         <button
-          onClick={() => setShowEquipmentPanel(v => !v)}
-          className="px-3 py-1.5 bg-cyan-600 text-white rounded text-sm hover:bg-cyan-500"
+          onClick={undo}
+          disabled={pastCount === 0}
+          title={t('plantBuilder.undo')}
+          className="px-1.5 md:px-2 py-1.5 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-sm"
         >
-          添加设备
+          &hookleftarrow;
+        </button>
+        <button
+          onClick={redo}
+          disabled={futureCount === 0}
+          title={t('plantBuilder.redo')}
+          className="px-1.5 md:px-2 py-1.5 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed text-sm"
+        >
+          &hookrightarrow;
+        </button>
+        <button
+          onClick={() => setShowEquipmentPanel(v => !v)}
+          className="px-2 md:px-3 py-1.5 bg-cyan-600 text-white rounded text-xs md:text-sm hover:bg-cyan-500"
+        >
+          {isMobile ? t('plantBuilder.addEquipmentShort') : t('plantBuilder.addEquipment')}
+        </button>
+        <button
+          onClick={() => setShowFlow(v => !v)}
+          className={`px-1.5 md:px-2 py-1.5 text-xs md:text-sm rounded ${showFlow ? 'bg-cyan-900 text-cyan-300' : 'bg-slate-700 text-slate-500'}`}
+          title={t('plantBuilder.flowAnim')}
+        >
+          {t('plantBuilder.flowAnim')}
         </button>
         <button
           onClick={handleValidate}
-          className="px-3 py-1.5 bg-slate-700 text-slate-300 rounded text-sm hover:bg-slate-600"
+          className="px-2 md:px-3 py-1.5 bg-slate-700 text-slate-300 rounded text-xs md:text-sm hover:bg-slate-600"
         >
-          校验拓扑
+          {isMobile ? t('plantBuilder.validateShort') : t('plantBuilder.validate')}
         </button>
         <button
           onClick={() => savePlant.mutate()}
           disabled={savePlant.isPending}
-          className="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-500 disabled:opacity-50"
+          className="px-2 md:px-3 py-1.5 bg-emerald-600 text-white rounded text-xs md:text-sm hover:bg-emerald-500 disabled:opacity-50"
         >
-          {savePlant.isPending ? '保存中...' : '保存'}
+          {savePlant.isPending ? t('plantBuilder.saving') : t('plantBuilder.save')}
         </button>
       </div>
 
-      {/* Validation results */}
       {validationIssues !== null && (
-        <div className="px-4 py-2 bg-slate-800 border-b border-slate-700 shrink-0">
+        <div className="px-2 md:px-4 py-2 bg-slate-800 border-b border-slate-700 shrink-0">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs font-semibold text-slate-400">
-              校验结果
+              {t('plantBuilder.validationResult')}
               {validationIssues.length === 0
-                ? ': 全部正常'
-                : `: ${validationIssues.filter(i => i.type === 'error').length} 错误, ${validationIssues.filter(i => i.type === 'warning').length} 警告`}
+                ? `: ${t('plantBuilder.allNormal')}`
+                : `: ${validationIssues.filter(i => i.type === 'error').length} ${t('plantBuilder.errors')}, ${validationIssues.filter(i => i.type === 'warning').length} ${t('plantBuilder.warnings')}`}
             </span>
             <button
               onClick={() => setValidationIssues(null)}
               className="text-xs text-slate-500 hover:text-slate-300"
             >
-              关闭
+              {t('plantBuilder.close')}
             </button>
           </div>
           {validationIssues.length > 0 && (
@@ -140,19 +183,34 @@ export default function PlantBuilder() {
         </div>
       )}
 
-      {/* Main area */}
       <div className="flex flex-1 overflow-hidden">
-        {showEquipmentPanel && <EquipmentPanel />}
+        {showEquipmentPanel && isMobile && (
+          <>
+            <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowEquipmentPanel(false)} />
+            <div className="fixed top-0 left-0 z-50 h-full w-56 bg-slate-800 border-r border-slate-700 flex flex-col">
+              <EquipmentPanel onClose={() => setShowEquipmentPanel(false)} />
+            </div>
+          </>
+        )}
+        {showEquipmentPanel && !isMobile && <EquipmentPanel />}
+
         <div className="flex-1 relative bg-slate-900">
           {isLoading ? (
-            <div className="flex items-center justify-center h-full text-slate-400">加载制冷站...</div>
+            <div className="flex items-center justify-center h-full text-slate-400">{t('plantBuilder.loadingPlant')}</div>
           ) : isError ? (
-            <div className="flex items-center justify-center h-full text-red-400">加载失败，请检查网络连接后刷新页面</div>
+            <div className="flex items-center justify-center h-full text-red-400">{t('plantBuilder.loadError')}</div>
           ) : (
-            <PlantCanvas />
+            <PlantCanvas showFlow={showFlow} />
           )}
         </div>
-        <PropertyPanel />
+
+        {isMobile ? (
+          <BottomSheet open={!!selectedId} onClose={() => setSelection(null)} title={t('plantBuilder.propertyPanel')}>
+            <PropertyPanel className="w-full border-l-0" />
+          </BottomSheet>
+        ) : (
+          <PropertyPanel />
+        )}
       </div>
 
       <PipeTable />

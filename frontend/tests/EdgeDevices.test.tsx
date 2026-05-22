@@ -58,8 +58,9 @@ describe('EdgeDevices page', () => {
       json: () => Promise.resolve(mockEdges),
     } as Response);
     renderPage();
-    expect(await screen.findByText('edge-01')).toBeDefined();
-    expect(screen.getByText('edge-02')).toBeDefined();
-    expect(screen.getByText('edge-03')).toBeDefined();
+    const edge01 = await screen.findAllByText('edge-01');
+    expect(edge01.length).toBeGreaterThan(0);
+    expect(screen.getAllByText('edge-02').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('edge-03').length).toBeGreaterThan(0);
   });
 });
