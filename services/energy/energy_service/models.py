@@ -1,6 +1,6 @@
 # services/energy/energy_service/models.py
 import datetime
-from sqlalchemy import Column, Integer, Float, String, DateTime, Text, JSON
+from sqlalchemy import Column, Integer, Float, String, DateTime, Text, JSON, ForeignKey
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -8,10 +8,32 @@ class Base(DeclarativeBase):
     pass
 
 
+# ---------------------------------------------------------------------------
+# Multi-tenant data isolation
+# ---------------------------------------------------------------------------
+# Every model below MUST include a tenant_id column so that each tenant's
+# data is isolated.  The gateway forwards ``X-Tenant-Id`` and the
+# TenantMiddleware (already added in main.py) sets the ContextVar.
+#
+# To apply tenant filtering in queries use the helper from common.tenant:
+#
+#     from common.tenant import tenant_filter
+#     q = select(EnergySnapshot).where(...)
+#     q = tenant_filter(q, EnergySnapshot)
+#
+# For models not yet migrated, the tenant_filter will silently pass through
+# (no filter applied) since the column doesn't exist.
+# ---------------------------------------------------------------------------
+
+
 class EnergySnapshot(Base):
     __tablename__ = "energy_snapshots"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(
+        Integer, ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=False, index=True, default=1,
+    )
     plant_id = Column(Integer, nullable=False, index=True)
     timestamp = Column(DateTime, default=datetime.datetime.utcnow, nullable=False, index=True)
     total_power_kw = Column(Float, nullable=False)

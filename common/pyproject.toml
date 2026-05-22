@@ -13,3 +13,9 @@ dependencies = [
     "bcrypt>=4.0",
     "prometheus-client>=0.21",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0",
+    "pytest-asyncio>=1.3",
+]

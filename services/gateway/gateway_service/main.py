@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import bcrypt
 from sqlalchemy import select
 
-from common.db import create_engine, create_session_factory, Base
+from common.db import create_engine, create_session_factory, Base, TenantModel
 from common.metrics import MetricsMiddleware, metrics_endpoint
 
 from .auth import router as auth_router
@@ -27,6 +27,15 @@ async def lifespan(app: FastAPI):
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
 
+    # Seed default tenant (MVP: single-tenant mode)
+    async with app.state.session_factory() as session:
+        result = await session.execute(select(TenantModel).where(TenantModel.id == 1))
+        if not result.scalar_one_or_none():
+            session.add(TenantModel(id=1, name="default"))
+            await session.commit()
+            logger = __import__("logging").getLogger(__name__)
+            logger.info("Seeded default tenant (id=1, name='default')")
+
     # Seed default admin user if no users exist
     async with app.state.session_factory() as session:
         result = await session.execute(select(UserModel).limit(1))
@@ -35,6 +44,7 @@ async def lifespan(app: FastAPI):
                 username="admin",
                 hashed_password=bcrypt.hashpw(b"admin", bcrypt.gensalt()).decode(),
                 role="admin",
+                tenant_id=1,
             ))
             await session.commit()
 

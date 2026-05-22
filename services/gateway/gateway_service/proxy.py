@@ -84,6 +84,25 @@ def get_backend(path: str) -> str | None:
     return None
 
 
+def _resolve_tenant_id(request: Request) -> int:
+    """Resolve tenant_id for the current request.
+
+    MVP strategy: try JWT first, fall back to default tenant 1.
+    Future: look up user.tenant_id from the users table.
+    """
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        try:
+            from common.auth import decode_token
+            claims = decode_token(auth_header[7:])
+            # Future: query user.tenant_id from DB
+            # For now every user belongs to tenant 1
+            return 1
+        except Exception:
+            pass
+    return 1  # MVP default
+
+
 async def proxy_request(request: Request):
     backend = get_backend(request.url.path)
     if not backend:
@@ -98,6 +117,10 @@ async def proxy_request(request: Request):
         val = request.headers.get(key)
         if val:
             headers[key] = val
+
+    # Resolve tenant_id from JWT (MVP: default to 1)
+    tenant_id = _resolve_tenant_id(request)
+    headers["x-tenant-id"] = str(tenant_id)
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
