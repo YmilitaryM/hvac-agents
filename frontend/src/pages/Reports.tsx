@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { fetchDailyReport } from '../api/reports';
@@ -6,6 +7,7 @@ import { fetchBenchmarking } from '../api/reports';
 import KpiCard from '../components/KpiCard';
 
 export default function Reports() {
+  const { t } = useTranslation();
   const [plantId, setPlantId] = useState('plant-1');
 
   const { data: report } = useQuery({
@@ -26,7 +28,7 @@ export default function Reports() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">报告</h2>
+        <h2 className="text-xl font-bold">{t('reports.title')}</h2>
         <input
           value={plantId}
           onChange={e => setPlantId(e.target.value)}
@@ -35,23 +37,21 @@ export default function Reports() {
         />
       </div>
 
-      {/* KPI Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        <KpiCard label="日均 COP" value={kpi.avg_cop?.toFixed(2) || '--'} color="text-cyan-400" />
-        <KpiCard label="总能耗 (kWh)" value={kpi.total_energy_kwh?.toFixed(0) || '--'} />
-        <KpiCard label="碳排放 (kgCO₂)" value={kpi.carbon_kg?.toFixed(0) || '--'} />
-        <KpiCard label="电费 (元)" value={kpi.electricity_cost?.toFixed(0) || '--'} />
+        <KpiCard label={t('reports.dailyAvgCop')} value={kpi.avg_cop?.toFixed(2) || '--'} color="text-cyan-400" />
+        <KpiCard label={t('reports.totalEnergy')} value={kpi.total_energy_kwh?.toFixed(0) || '--'} />
+        <KpiCard label={t('reports.carbonEmissions')} value={kpi.carbon_kg?.toFixed(0) || '--'} />
+        <KpiCard label={t('reports.electricityCost')} value={kpi.electricity_cost?.toFixed(0) || '--'} />
       </div>
 
-      {/* Strategy Stats Chart */}
       <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-4">
-        <h3 className="text-sm text-slate-400 uppercase mb-3">策略使用统计</h3>
+        <h3 className="text-sm text-slate-400 uppercase mb-3">{t('reports.strategyStats')}</h3>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={[
-            { name: '默认策略', count: 45 },
-            { name: '节能优先', count: 32 },
-            { name: '舒适优先', count: 18 },
-            { name: 'DRL优化', count: 5 },
+            { name: t('reports.defaultStrategy'), count: 45 },
+            { name: t('reports.energySaveStrategy'), count: 32 },
+            { name: t('reports.comfortStrategy'), count: 18 },
+            { name: t('reports.drlStrategy'), count: 5 },
           ]}>
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
             <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
@@ -62,17 +62,16 @@ export default function Reports() {
         </ResponsiveContainer>
       </div>
 
-      {/* Recommendations + Benchmarking */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
-          <h3 className="font-medium mb-3">优化建议</h3>
+          <h3 className="font-medium mb-3">{t('reports.optimizationSuggestions')}</h3>
           {recommendations.length === 0 ? (
             <div className="text-slate-500 text-sm">
-              <p>暂无建议。运行更多仿真以获取优化建议。</p>
+              <p>{t('reports.noSuggestions')}</p>
               <ul className="list-disc list-inside mt-2 space-y-1 text-slate-400">
-                <li>提高冷冻水设定温度可降低能耗</li>
-                <li>检查冷却塔风扇频率设定</li>
-                <li>考虑夜间蓄冷策略降低峰时电费</li>
+                <li>{t('reports.suggestion1')}</li>
+                <li>{t('reports.suggestion2')}</li>
+                <li>{t('reports.suggestion3')}</li>
               </ul>
             </div>
           ) : (
@@ -85,23 +84,23 @@ export default function Reports() {
         </div>
 
         <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
-          <h3 className="font-medium mb-3">多站能效对标</h3>
+          <h3 className="font-medium mb-3">{t('reports.benchmarking')}</h3>
           {plants.length === 0 ? (
             <div className="text-slate-500 text-sm">
               <table className="w-full text-sm">
                 <thead className="text-slate-400">
                   <tr>
-                    <th className="text-left py-1">排名</th>
-                    <th className="text-left py-1">制冷站</th>
-                    <th className="text-left py-1">COP</th>
-                    <th className="text-left py-1">能耗强度</th>
+                    <th className="text-left py-1">{t('reports.rank')}</th>
+                    <th className="text-left py-1">{t('reports.plant')}</th>
+                    <th className="text-left py-1">{t('reports.cop')}</th>
+                    <th className="text-left py-1">{t('reports.energyIntensity')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { rank: 1, name: 'Plant A (北京)', cop: 5.2, intensity: '0.68 kW/RT' },
-                    { rank: 2, name: 'Plant B (上海)', cop: 4.8, intensity: '0.73 kW/RT' },
-                    { rank: 3, name: 'Plant C (广州)', cop: 4.3, intensity: '0.82 kW/RT' },
+                    { rank: 1, name: 'Plant A (Beijing)', cop: 5.2, intensity: '0.68 kW/RT' },
+                    { rank: 2, name: 'Plant B (Shanghai)', cop: 4.8, intensity: '0.73 kW/RT' },
+                    { rank: 3, name: 'Plant C (Guangzhou)', cop: 4.3, intensity: '0.82 kW/RT' },
                   ].map(p => (
                     <tr key={p.rank} className="border-t border-slate-700">
                       <td className="py-1.5">{p.rank}</td>
@@ -117,10 +116,10 @@ export default function Reports() {
             <table className="w-full text-sm">
               <thead className="text-slate-400">
                 <tr>
-                  <th className="text-left py-1">排名</th>
-                  <th className="text-left py-1">制冷站</th>
-                  <th className="text-left py-1">COP</th>
-                  <th className="text-left py-1">碳强 (kgCO₂/RT)</th>
+                  <th className="text-left py-1">{t('reports.rank')}</th>
+                  <th className="text-left py-1">{t('reports.plant')}</th>
+                  <th className="text-left py-1">{t('reports.cop')}</th>
+                  <th className="text-left py-1">{t('reports.carbonIntensity')}</th>
                 </tr>
               </thead>
               <tbody>

@@ -1,9 +1,12 @@
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { healthApi } from '../../api/health';
 import { downloadFile } from '../../api/client';
 import { useState } from 'react';
 
 export default function RULPrediction() {
+  const { t } = useTranslation();
+
   const { data, isLoading } = useQuery({
     queryKey: ['health-rul', 1],
     queryFn: () => healthApi.getRUL(1),
@@ -14,26 +17,26 @@ export default function RULPrediction() {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      await downloadFile('/api/health/rul/download?plant_id=1', 'RUL预测.xlsx');
+      await downloadFile('/api/health/rul/download?plant_id=1', 'RUL_Prediction.xlsx');
     } catch (e) {
-      alert('下载失败: ' + (e as Error).message);
+      alert(t('healthRUL.downloadFailed') + ': ' + (e as Error).message);
     } finally {
       setDownloading(false);
     }
   };
 
-  if (isLoading || !data) return <div className="p-6 text-gray-400">加载中...</div>;
+  if (isLoading || !data) return <div className="p-6 text-gray-400">{t('common.loading')}</div>;
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">RUL 预测</h1>
+        <h1 className="text-2xl font-bold">{t('healthRUL.title')}</h1>
         <button
           onClick={handleDownload}
           disabled={downloading}
           className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
         >
-          {downloading ? '下载中...' : '导出Excel'}
+          {downloading ? t('healthRUL.downloading') : t('healthRUL.exportExcel')}
         </button>
       </div>
       <div className="space-y-4">
@@ -47,12 +50,12 @@ export default function RULPrediction() {
             <div key={i} className={`bg-white rounded-lg shadow p-4 border-l-4 ${borderColor}`}>
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="font-semibold">设备 {item.equipment_id} - {item.component}</div>
-                  <div className="text-sm text-gray-500">模型: {item.degradation_model}</div>
+                  <div className="font-semibold">{t('healthRUL.device')} {item.equipment_id} - {item.component}</div>
+                  <div className="text-sm text-gray-500">{t('healthRUL.model')}: {item.degradation_model}</div>
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-bold">{days} <span className="text-base text-gray-500">天</span></div>
-                  <div className="text-xs text-gray-400">80%CI: {daysLo}-{daysHi} 天</div>
+                  <div className="text-3xl font-bold">{days} <span className="text-base text-gray-500">{t('healthRUL.days')}</span></div>
+                  <div className="text-xs text-gray-400">{t('healthRUL.ciRange')}: {daysLo}-{daysHi} {t('healthRUL.days')}</div>
                 </div>
               </div>
             </div>

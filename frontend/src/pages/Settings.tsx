@@ -1,8 +1,7 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchVersions, getVersionDiff, rollbackVersion } from '../api/versions';
-
-const ROLE_LABELS: Record<string, string> = { ADMIN: '管理员', ENGINEER: '工程师', OPERATOR: '操作员', VIEWER: '观察者', AUDITOR: '审计员' };
 
 async function fetchUsers() {
   const resp = await fetch('/api/auth/users');
@@ -13,6 +12,7 @@ async function fetchUsers() {
 type Tab = 'users' | 'versions';
 
 export default function Settings() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>('users');
   const [entityType, setEntityType] = useState('plant_topology');
@@ -53,36 +53,35 @@ export default function Settings() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">系统设置</h2>
+      <h2 className="text-xl font-bold mb-4">{t('settings.title')}</h2>
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setTab('users')}
           className={`px-4 py-1.5 rounded text-sm ${tab === 'users' ? 'bg-cyan-600 text-white' : 'bg-slate-700 text-slate-300'}`}
         >
-          用户管理
+          {t('settings.userManagement')}
         </button>
         <button
           onClick={() => setTab('versions')}
           className={`px-4 py-1.5 rounded text-sm ${tab === 'versions' ? 'bg-cyan-600 text-white' : 'bg-slate-700 text-slate-300'}`}
         >
-          版本历史
+          {t('settings.versionHistory')}
         </button>
       </div>
 
       {tab === 'users' && (
         <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
           {users.length === 0 ? (
-            <div className="text-slate-500 text-center py-8 text-sm">暂无用户数据</div>
+            <div className="text-slate-500 text-center py-8 text-sm">{t('common.noUsers')}</div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-slate-700">
                 <tr>
-                  <th className="text-left p-3">用户名</th>
-                  <th className="text-left p-3">角色</th>
-                  <th className="text-left p-3">邮箱</th>
-                  <th className="text-left p-3">创建时间</th>
+                  <th className="text-left p-3">{t('settings.username')}</th>
+                  <th className="text-left p-3">{t('settings.role')}</th>
+                  <th className="text-left p-3">{t('settings.email')}</th>
+                  <th className="text-left p-3">{t('settings.createdAt')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,7 +89,7 @@ export default function Settings() {
                   <tr key={u.id} className="border-t border-slate-700">
                     <td className="p-3">{u.username}</td>
                     <td className="p-3">
-                      <span className="px-2 py-0.5 rounded text-xs bg-slate-700">{ROLE_LABELS[u.role] || u.role}</span>
+                      <span className="px-2 py-0.5 rounded text-xs bg-slate-700">{t(`role.${u.role}`, u.role)}</span>
                     </td>
                     <td className="p-3 text-slate-400">{u.email || '--'}</td>
                     <td className="p-3 text-slate-400">{u.created_at ? new Date(u.created_at).toLocaleDateString() : '--'}</td>
@@ -106,20 +105,20 @@ export default function Settings() {
         <div>
           <div className="flex gap-3 mb-4 items-end">
             <div>
-              <label className="text-xs text-slate-400 block mb-1">实体类型</label>
+              <label className="text-xs text-slate-400 block mb-1">{t('settings.entityType')}</label>
               <select
                 value={entityType}
                 onChange={e => setEntityType(e.target.value)}
                 className="bg-slate-700 border border-slate-600 rounded px-2 py-1 text-sm"
               >
-                <option value="plant_topology">制冷站拓扑</option>
-                <option value="equipment">设备参数</option>
-                <option value="control_strategy">控制策略</option>
-                <option value="rl_weights">RL 权重</option>
+                <option value="plant_topology">{t('settings.plantTopology')}</option>
+                <option value="equipment">{t('settings.equipmentParams')}</option>
+                <option value="control_strategy">{t('settings.controlStrategy')}</option>
+                <option value="rl_weights">{t('settings.rlWeights')}</option>
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-400 block mb-1">实体 ID</label>
+              <label className="text-xs text-slate-400 block mb-1">{t('settings.entityId')}</label>
               <input
                 value={entityId}
                 onChange={e => setEntityId(e.target.value)}
@@ -131,7 +130,7 @@ export default function Settings() {
           <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden mb-4">
             {verList.length === 0 ? (
               <div className="text-slate-500 text-center py-8 text-sm">
-                暂无版本记录。修改设备或拓扑后将自动创建版本快照。
+                {t('common.noVersions')}
               </div>
             ) : (
               verList.map((v: any) => (
@@ -156,7 +155,7 @@ export default function Settings() {
 
           {diff && (
             <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
-              <h3 className="font-medium mb-2">v{diffVer} 变更对比</h3>
+              <h3 className="font-medium mb-2">v{diffVer} {t('settings.changeCompare')}</h3>
               <pre className="bg-slate-900 rounded p-3 text-xs overflow-auto max-h-64">
                 {JSON.stringify(diff.diff || diff, null, 2)}
               </pre>
@@ -165,7 +164,7 @@ export default function Settings() {
                   <input
                     value={rollbackReason}
                     onChange={e => setRollbackReason(e.target.value)}
-                    placeholder="回滚原因（必填）"
+                    placeholder={t('settings.rollbackReason')}
                     className="bg-slate-700 border border-slate-600 rounded px-2 py-1 w-full text-sm"
                   />
                   <button
@@ -173,13 +172,13 @@ export default function Settings() {
                     disabled={!rollbackReason.trim() || rollbackMut.isPending}
                     onClick={() => rollbackMut.mutate({ targetVersion: diffVer, reason: rollbackReason })}
                   >
-                    {rollbackMut.isPending ? '回滚中...' : `回滚到 v${diffVer}`}
+                    {rollbackMut.isPending ? t('common.rollbacking') : `${t('settings.rollbackTo')} v${diffVer}`}
                   </button>
                   {rollbackMut.isError && (
-                    <p className="text-red-400 text-xs">回滚失败: {(rollbackMut.error as any)?.message}</p>
+                    <p className="text-red-400 text-xs">{t('settings.rollbackFailed')}: {(rollbackMut.error as any)?.message}</p>
                   )}
                   {rollbackMut.isSuccess && (
-                    <p className="text-green-400 text-xs">回滚成功</p>
+                    <p className="text-green-400 text-xs">{t('settings.rollbackSuccess')}</p>
                   )}
                 </div>
               )}

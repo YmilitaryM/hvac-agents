@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import KpiCard from '../components/KpiCard';
 import { evaluateDegradation, predictFailure, type DegradationResult, type PredictResult } from '../api/maintenance';
 
 export default function Maintenance() {
+  const { t } = useTranslation();
   const [edgeId, setEdgeId] = useState('');
   const [equipmentId, setEquipmentId] = useState('');
   const [equipmentType, setEquipmentType] = useState('chiller');
@@ -35,9 +37,9 @@ export default function Maintenance() {
   };
 
   const severityLabel = (s: string) => {
-    if (s === 'healthy') return '健康';
-    if (s === 'degrading') return '退化中';
-    return '严重';
+    if (s === 'healthy') return t('maintenance.healthy');
+    if (s === 'degrading') return t('maintenance.degrading');
+    return t('maintenance.critical');
   };
 
   const probGaugeColor = (p: number) => {
@@ -48,36 +50,36 @@ export default function Maintenance() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">预测维护</h2>
+      <h2 className="text-xl font-bold mb-4">{t('maintenance.title')}</h2>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <KpiCard label="健康" value="--" color="text-green-400" />
-        <KpiCard label="退化中" value="--" color="text-yellow-400" />
-        <KpiCard label="严重" value="--" color="text-red-400" />
+        <KpiCard label={t('maintenance.healthy')} value="--" color="text-green-400" />
+        <KpiCard label={t('maintenance.degrading')} value="--" color="text-yellow-400" />
+        <KpiCard label={t('maintenance.critical')} value="--" color="text-red-400" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
-          <h3 className="text-sm text-slate-400 uppercase mb-4">退化评估</h3>
+          <h3 className="text-sm text-slate-400 uppercase mb-4">{t('maintenance.degradationEval')}</h3>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">设备ID</label>
-              <input value={equipmentId} onChange={e => setEquipmentId(e.target.value)} placeholder="例如 chiller-1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
+              <label className="block text-xs text-slate-400 mb-1">{t('maintenance.equipmentId')}</label>
+              <input value={equipmentId} onChange={e => setEquipmentId(e.target.value)} placeholder="e.g. chiller-1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">设计COP</label>
+              <label className="block text-xs text-slate-400 mb-1">{t('maintenance.designCop')}</label>
               <input value={designCop} onChange={e => setDesignCop(e.target.value)} type="number" step="0.1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">COP窗口 (逗号分隔)</label>
+              <label className="block text-xs text-slate-400 mb-1">{t('maintenance.copWindow')}</label>
               <input value={copWindow} onChange={e => setCopWindow(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">趋近温度均值 (°C)</label>
+              <label className="block text-xs text-slate-400 mb-1">{t('maintenance.approachTempAvg')}</label>
               <input value={approachTempAvg} onChange={e => setApproachTempAvg(e.target.value)} type="number" step="0.1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">振动窗口 (逗号分隔)</label>
+              <label className="block text-xs text-slate-400 mb-1">{t('maintenance.vibrationWindow')}</label>
               <input value={vibrationWindow} onChange={e => setVibrationWindow(e.target.value)} className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <button
@@ -93,7 +95,7 @@ export default function Maintenance() {
               disabled={evalMut.isPending}
               className="w-full bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
             >
-              {evalMut.isPending ? '评估中...' : '运行评估'}
+              {evalMut.isPending ? t('maintenance.evaluating') : t('maintenance.runEval')}
             </button>
           </div>
 
@@ -108,8 +110,8 @@ export default function Maintenance() {
                 <span className="font-semibold">{severityLabel(evalResult.severity)}</span>
               </div>
               <div className="text-sm text-slate-300 grid grid-cols-2 gap-2">
-                <div>COP退化率: <span className="text-white">{evalResult.cop_degradation_pct.toFixed(1)}%</span></div>
-                <div>CUSUM触发: <span className={evalResult.cusum_triggered ? 'text-red-400' : 'text-green-400'}>{evalResult.cusum_triggered ? '是' : '否'}</span></div>
+                <div>{t('maintenance.copDegradationRate')}: <span className="text-white">{evalResult.cop_degradation_pct.toFixed(1)}%</span></div>
+                <div>{t('maintenance.cusumTriggered')}: <span className={evalResult.cusum_triggered ? 'text-red-400' : 'text-green-400'}>{evalResult.cusum_triggered ? t('maintenance.yes') : t('maintenance.no')}</span></div>
               </div>
               {evalResult.recommended_action && (
                 <div className="text-sm bg-slate-800 rounded p-2 text-slate-300">{evalResult.recommended_action}</div>
@@ -119,18 +121,18 @@ export default function Maintenance() {
         </div>
 
         <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
-          <h3 className="text-sm text-slate-400 uppercase mb-4">故障预测</h3>
+          <h3 className="text-sm text-slate-400 uppercase mb-4">{t('maintenance.failurePrediction')}</h3>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs text-slate-400 mb-1">当前COP</label>
+              <label className="block text-xs text-slate-400 mb-1">{t('maintenance.currentCop')}</label>
               <input value={predCop} onChange={e => setPredCop(e.target.value)} type="number" step="0.1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">振动RMS</label>
+              <label className="block text-xs text-slate-400 mb-1">{t('maintenance.vibrationRMS')}</label>
               <input value={predVib} onChange={e => setPredVib(e.target.value)} type="number" step="0.1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <div>
-              <label className="block text-xs text-slate-400 mb-1">趋近温度 (°C)</label>
+              <label className="block text-xs text-slate-400 mb-1">{t('maintenance.approachTemp')}</label>
               <input value={predApproach} onChange={e => setPredApproach(e.target.value)} type="number" step="0.1" className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-sm text-slate-200" />
             </div>
             <button
@@ -142,7 +144,7 @@ export default function Maintenance() {
               disabled={predMut.isPending}
               className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm font-medium disabled:opacity-50"
             >
-              {predMut.isPending ? '预测中...' : '预测故障'}
+              {predMut.isPending ? t('maintenance.predicting') : t('maintenance.predictFailure')}
             </button>
           </div>
 
@@ -152,7 +154,7 @@ export default function Maintenance() {
 
           {predResult && (
             <div className="mt-4 bg-slate-700/50 rounded p-4 flex flex-col items-center">
-              <div className="text-xs text-slate-400 mb-2">故障概率</div>
+              <div className="text-xs text-slate-400 mb-2">{t('maintenance.failureProb')}</div>
               <div className={`text-5xl font-bold ${probGaugeColor(predResult.failure_probability)}`}>
                 {(predResult.failure_probability * 100).toFixed(1)}%
               </div>

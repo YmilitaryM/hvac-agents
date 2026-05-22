@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import KpiCard from '../components/KpiCard';
@@ -19,6 +20,8 @@ const FALLBACK_CHART = [
 ];
 
 export default function Dashboard() {
+  const { t } = useTranslation();
+
   const { data: kpi, isError: kpiError } = useQuery({
     queryKey: ['kpi'],
     queryFn: fetchKpi,
@@ -52,25 +55,23 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold mb-4">系统总览</h2>
+      <h2 className="text-xl font-bold mb-4">{t('dashboard.title')}</h2>
 
       {hasErrors && (
         <div className="bg-yellow-900/50 border border-yellow-600 rounded-lg p-3 mb-4 text-sm text-yellow-300">
-          ⚠ 部分数据加载失败，显示内容可能不是最新数据
+          {t('dashboard.partialError')}
         </div>
       )}
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <KpiCard label="系统 COP" value={k.system_cop != null ? k.system_cop.toFixed(2) : '--'} color="text-cyan-400" />
-        <KpiCard label="冷负荷 (RT)" value={k.total_cooling_load_rt != null ? k.total_cooling_load_rt.toFixed(0) : '--'} />
-        <KpiCard label="总功率 (kW)" value={k.total_power_kw != null ? k.total_power_kw.toFixed(0) : '--'} />
-        <KpiCard label="室外湿球温度 (°C)" value={k.outdoor_wb_temp != null ? k.outdoor_wb_temp.toFixed(1) : '--'} />
+        <KpiCard label={t('dashboard.systemCop')} value={k.system_cop != null ? k.system_cop.toFixed(2) : '--'} color="text-cyan-400" />
+        <KpiCard label={t('dashboard.coolingLoad')} value={k.total_cooling_load_rt != null ? k.total_cooling_load_rt.toFixed(0) : '--'} />
+        <KpiCard label={t('dashboard.totalPower')} value={k.total_power_kw != null ? k.total_power_kw.toFixed(0) : '--'} />
+        <KpiCard label={t('dashboard.outdoorWbTemp')} value={k.outdoor_wb_temp != null ? k.outdoor_wb_temp.toFixed(1) : '--'} />
       </div>
 
-      {/* Main Chart: COP / Load / Power */}
       <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 mb-6">
-        <h3 className="text-sm text-slate-400 uppercase mb-3">COP / 负荷 / 功率 趋势</h3>
+        <h3 className="text-sm text-slate-400 uppercase mb-3">{t('dashboard.chartTitle')}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
@@ -81,26 +82,24 @@ export default function Dashboard() {
               contentStyle={{ background: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
               labelStyle={{ color: '#e2e8f0' }}
             />
-            <Line yAxisId="left" type="monotone" dataKey="cop" stroke="#38bdf8" strokeWidth={2} dot={false} name="COP" />
-            <Line yAxisId="right" type="monotone" dataKey="load" stroke="#a78bfa" strokeWidth={2} dot={false} name="负荷 (RT)" />
-            <Line yAxisId="right" type="monotone" dataKey="power" stroke="#f472b6" strokeWidth={2} dot={false} name="功率 (kW)" />
+            <Line yAxisId="left" type="monotone" dataKey="cop" stroke="#38bdf8" strokeWidth={2} dot={false} name={t('dashboard.cop')} />
+            <Line yAxisId="right" type="monotone" dataKey="load" stroke="#a78bfa" strokeWidth={2} dot={false} name={t('dashboard.loadRT')} />
+            <Line yAxisId="right" type="monotone" dataKey="power" stroke="#f472b6" strokeWidth={2} dot={false} name={t('dashboard.powerKW')} />
           </LineChart>
         </ResponsiveContainer>
         <div className="flex gap-4 mt-2 text-xs text-slate-400">
-          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-cyan-400 inline-block" /> COP</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-purple-400 inline-block" /> 负荷 (RT)</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-pink-400 inline-block" /> 功率 (kW)</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-cyan-400 inline-block" /> {t('dashboard.cop')}</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-purple-400 inline-block" /> {t('dashboard.loadRT')}</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-pink-400 inline-block" /> {t('dashboard.powerKW')}</span>
         </div>
       </div>
 
-      {/* Bottom row: Device Status + Recent Alerts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Equipment Status */}
         <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
-          <h3 className="text-sm text-slate-400 uppercase mb-3">设备状态</h3>
+          <h3 className="text-sm text-slate-400 uppercase mb-3">{t('dashboard.equipmentStatus')}</h3>
           <div className="space-y-2">
             {Object.keys(chillers).length === 0 && Object.keys(pumps).length === 0 ? (
-              <div className="text-slate-500 text-sm text-center py-8">等待仿真数据...</div>
+              <div className="text-slate-500 text-sm text-center py-8">{t('dashboard.waitingData')}</div>
             ) : (
               <>
                 {Object.entries(chillers).map(([id, ch]: [string, any]) => (
@@ -108,7 +107,7 @@ export default function Dashboard() {
                     <div>
                       <div className="text-sm font-medium">{ch.name || id}</div>
                       <div className="text-xs text-slate-400 mt-0.5">
-                        PLR: {ch.plr != null ? (ch.plr * 100).toFixed(0) + '%' : '--'} | COP: {ch.cop != null ? ch.cop.toFixed(1) : '--'} | 功率: {ch.power_kw != null ? ch.power_kw.toFixed(0) : '--'} kW
+                        {t('dashboard.plr')}: {ch.plr != null ? (ch.plr * 100).toFixed(0) + '%' : '--'} | {t('dashboard.copShort')}: {ch.cop != null ? ch.cop.toFixed(1) : '--'} | {t('dashboard.powerShort')}: {ch.power_kw != null ? ch.power_kw.toFixed(0) : '--'} kW
                       </div>
                     </div>
                     <span className={`w-2 h-2 rounded-full ${ch.status === 'surging' ? 'bg-red-400' : 'bg-green-400'}`} title={ch.status} />
@@ -119,7 +118,7 @@ export default function Dashboard() {
                     <div>
                       <div className="text-sm font-medium">{id}</div>
                       <div className="text-xs text-slate-400 mt-0.5">
-                        功率: {p.power_kw != null ? p.power_kw.toFixed(0) : '--'} kW
+                        {t('dashboard.powerShort')}: {p.power_kw != null ? p.power_kw.toFixed(0) : '--'} kW
                       </div>
                     </div>
                     <span className="w-2 h-2 rounded-full bg-green-400" title={p.status || 'running'} />
@@ -130,7 +129,7 @@ export default function Dashboard() {
                     <div>
                       <div className="text-sm font-medium">{id}</div>
                       <div className="text-xs text-slate-400 mt-0.5">
-                        功率: {t.power_kw != null ? t.power_kw.toFixed(0) : '--'} kW
+                        {t('dashboard.powerShort')}: {t.power_kw != null ? t.power_kw.toFixed(0) : '--'} kW
                       </div>
                     </div>
                     <span className="w-2 h-2 rounded-full bg-green-400" title={t.status || 'running'} />
@@ -141,11 +140,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Recent Alerts */}
         <div className="bg-slate-800 rounded-lg border border-slate-700 p-4">
-          <h3 className="text-sm text-slate-400 uppercase mb-3">最近告警</h3>
+          <h3 className="text-sm text-slate-400 uppercase mb-3">{t('dashboard.recentAlerts')}</h3>
           {alerts.length === 0 ? (
-            <div className="text-slate-500 text-sm text-center py-8">无未确认告警</div>
+            <div className="text-slate-500 text-sm text-center py-8">{t('dashboard.noUnackedAlerts')}</div>
           ) : (
             <div className="space-y-2">
               {alerts.slice(0, 5).map((a: any) => (
@@ -156,7 +154,7 @@ export default function Dashboard() {
                     }`}>
                       {a.severity}
                     </span>
-                    {a.message || a.rule_name || '告警'}
+                    {a.message || a.rule_name || t('dashboard.alert')}
                   </div>
                   <span className="text-xs text-slate-400">
                     {a.timestamp ? new Date(a.timestamp).toLocaleTimeString() : ''}

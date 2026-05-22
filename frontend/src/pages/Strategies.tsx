@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchStrategies, updateStrategyStatus, deleteStrategy } from '../api/strategies';
 import { getRLStatus, runInference } from '../api/rl';
@@ -11,6 +12,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function Strategies() {
+  const { t } = useTranslation();
   const qc = useQueryClient();
   const [selected, setSelected] = useState<any>(null);
   const [rlResult, setRlResult] = useState<any>(null);
@@ -38,11 +40,11 @@ export default function Strategies() {
   return (
     <div className="flex gap-4">
       <div className="flex-1">
-        <h2 className="text-xl font-bold mb-4">策略中心</h2>
+        <h2 className="text-xl font-bold mb-4">{t('strategies.title')}</h2>
 
         <div className="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
           {items.length === 0 ? (
-            <div className="text-slate-500 text-center py-12">暂无策略记录</div>
+            <div className="text-slate-500 text-center py-12">{t('strategies.noStrategies')}</div>
           ) : (
             items.map((s: any) => (
               <div
@@ -66,20 +68,19 @@ export default function Strategies() {
           )}
         </div>
 
-        {/* RL Status Card */}
         <div className="bg-slate-800 rounded-lg border border-slate-700 p-4 mt-4">
-          <h3 className="font-medium mb-3">DRL 控制优化</h3>
+          <h3 className="font-medium mb-3">{t('strategies.drlTitle')}</h3>
           <div className="grid grid-cols-3 gap-3 mb-3 text-sm">
             <div>
-              <div className="text-xs text-slate-400">训练状态</div>
+              <div className="text-xs text-slate-400">{t('strategies.trainingStatus')}</div>
               <div>{rlStatus?.training?.status || 'idle'}</div>
             </div>
             <div>
-              <div className="text-xs text-slate-400">总步数</div>
+              <div className="text-xs text-slate-400">{t('strategies.totalSteps')}</div>
               <div>{rlStatus?.model?.total_steps || 0}</div>
             </div>
             <div>
-              <div className="text-xs text-slate-400">安全违规率</div>
+              <div className="text-xs text-slate-400">{t('strategies.safetyRate')}</div>
               <div>{rlStatus?.safety?.violation_rate ?? '--'}</div>
             </div>
           </div>
@@ -87,25 +88,24 @@ export default function Strategies() {
             onClick={handleInference}
             className="bg-purple-600 hover:bg-purple-500 px-3 py-1.5 rounded text-sm"
           >
-            DRL 推理
+            {t('strategies.drlInference')}
           </button>
           {rlResult && (
             <div className="mt-3 p-3 bg-slate-700 rounded text-sm">
-              <div className="text-xs text-slate-400 mb-1">推理结果</div>
+              <div className="text-xs text-slate-400 mb-1">{t('strategies.inferenceResult')}</div>
               <div className="grid grid-cols-2 gap-1">
                 {Object.entries(rlResult.action || {}).map(([k, v]) => (
                   <div key={k}>{k}: {String(v)}</div>
                 ))}
               </div>
               {!rlResult.safety_passed && (
-                <div className="text-red-400 text-xs mt-1">安全门拦截: {rlResult.safety_reason}</div>
+                <div className="text-red-400 text-xs mt-1">{t('strategies.safetyBlocked')}: {rlResult.safety_reason}</div>
               )}
             </div>
           )}
         </div>
       </div>
 
-      {/* Detail Panel */}
       {selected && (
         <div className="w-80 bg-slate-800 rounded-lg border border-slate-700 p-4 shrink-0">
           <div className="flex items-center justify-between mb-3">
@@ -122,7 +122,7 @@ export default function Strategies() {
                 onClick={() => statusMut.mutate({ id: selected.id, status: 'active' })}
                 className="text-xs bg-green-700 hover:bg-green-600 px-2 py-1 rounded"
               >
-                激活
+                {t('strategies.activate')}
               </button>
             )}
             {selected.status === 'active' && (
@@ -130,20 +130,20 @@ export default function Strategies() {
                 onClick={() => statusMut.mutate({ id: selected.id, status: 'inactive' })}
                 className="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded"
               >
-                停用
+                {t('strategies.deactivate')}
               </button>
             )}
             <button
               onClick={() => statusMut.mutate({ id: selected.id, status: 'archived' })}
               className="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded"
             >
-              归档
+              {t('strategies.archive')}
             </button>
             <button
-              onClick={() => { if (confirm('确认删除?')) deleteMut.mutate(selected.id); }}
+              onClick={() => { if (confirm(t('strategies.confirmDelete'))) deleteMut.mutate(selected.id); }}
               className="text-xs bg-red-700 hover:bg-red-600 px-2 py-1 rounded"
             >
-              删除
+              {t('strategies.delete')}
             </button>
           </div>
         </div>

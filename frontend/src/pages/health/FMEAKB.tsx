@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { healthApi } from '../../api/health';
 import { downloadFile } from '../../api/client';
 import type { FMEARecord } from '../../api/health';
 
 export default function FMEAKB() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<FMEARecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -21,9 +23,9 @@ export default function FMEAKB() {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      await downloadFile('/api/health/fmea/download', 'FMEA知识库.xlsx');
+      await downloadFile('/api/health/fmea/download', 'FMEA_KB.xlsx');
     } catch (e) {
-      alert('下载失败: ' + (e as Error).message);
+      alert(t('healthFMEA.downloadFailed') + ': ' + (e as Error).message);
     } finally {
       setDownloading(false);
     }
@@ -48,10 +50,10 @@ export default function FMEAKB() {
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       const data = await resp.json();
-      alert(`导入成功: ${(data as any).count ?? (data as any).length ?? 0} 条记录`);
+      alert(`${t('healthFMEA.importSuccess')}: ${(data as any).count ?? (data as any).length ?? 0} records`);
       doSearch();
     } catch (e) {
-      alert('导入失败: ' + (e as Error).message);
+      alert(t('healthFMEA.importFailed') + ': ' + (e as Error).message);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -61,17 +63,17 @@ export default function FMEAKB() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">FMEA 知识库</h1>
+        <h1 className="text-2xl font-bold">{t('healthFMEA.title')}</h1>
         <div className="flex gap-2">
           <button
             onClick={handleDownload}
             disabled={downloading}
             className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
           >
-            {downloading ? '下载中...' : '导出Excel'}
+            {downloading ? t('common.downloading') : t('healthFMEA.exportExcel')}
           </button>
           <label className={`bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 cursor-pointer ${uploading ? 'opacity-50' : ''}`}>
-            {uploading ? '导入中...' : '批量导入'}
+            {uploading ? t('healthFMEA.importing') : t('healthFMEA.batchImport')}
             <input
               ref={fileInputRef}
               type="file"
@@ -87,13 +89,13 @@ export default function FMEAKB() {
         <div className="flex gap-2 mb-4">
           <input
             type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索失效模式、部件..."
+            placeholder={t('healthFMEA.searchPlaceholder')}
             className="border rounded px-3 py-2 flex-1"
             onKeyDown={(e) => e.key === 'Enter' && doSearch()}
           />
           <button onClick={doSearch} disabled={loading}
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-            {loading ? '搜索中...' : '搜索'}
+            {loading ? t('healthFMEA.searching') : t('healthFMEA.search')}
           </button>
         </div>
         <div className="space-y-3">
@@ -102,13 +104,13 @@ export default function FMEAKB() {
               <div className="flex justify-between">
                 <div className="font-semibold">{r.failure_mode}</div>
                 <div>
-                  <span className="text-sm text-gray-500 mr-2">RPN</span>
+                  <span className="text-sm text-gray-500 mr-2">{t('healthFMEA.rpn')}</span>
                   <span className={`font-bold ${r.rpn > 100 ? 'text-red-600' : r.rpn > 50 ? 'text-yellow-600' : 'text-green-600'}`}>{r.rpn}</span>
                 </div>
               </div>
               <div className="text-sm text-gray-500">{r.equipment_type} &gt; {r.component}</div>
               <div className="text-sm text-gray-400 mt-1">S={r.severity} O={r.occurrence} D={r.detection}</div>
-              {r.mitigation && <div className="text-sm mt-2 bg-blue-50 rounded p-2">措施: {r.mitigation}</div>}
+              {r.mitigation && <div className="text-sm mt-2 bg-blue-50 rounded p-2">{t('healthFMEA.measures')}: {r.mitigation}</div>}
             </div>
           ))}
         </div>

@@ -1,38 +1,11 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useSidebarStore } from './useSidebarStore';
 import MobileSidebar from './MobileSidebar';
 import { useAuth } from '../contexts/AuthContext';
 
-const ROLE_LABELS: Record<string, string> = {
-  viewer: '查看者',
-  operator: '操作员',
-  engineer: '工程师',
-  admin: '管理员',
-  auditor: '审计员',
-};
-
-const NAV = [
-  { to: '/', label: 'Dashboard', short: '🏠' },
-  { to: '/equipment', label: '设备管理', short: '设备' },
-  { to: '/plant', label: '制冷站', short: '制冷' },
-  { to: '/environment', label: '环境配置', short: '环境' },
-  { to: '/simulation', label: '仿真控制', short: '仿真' },
-  { to: '/strategies', label: '策略中心', short: '策略' },
-  { to: '/reports', label: '报告', short: '报告' },
-  { to: '/alerts', label: '告警', short: '告警' },
-  { to: '/override', label: '手动干预', short: '干预' },
-  { to: '/settings', label: '系统设置', short: '设置' },
-  { section: '── 监控分析 ──' },
-  { to: '/energy/dashboard', label: '能源管理', short: '能源' },
-  { to: '/health/dashboard', label: '设备健康', short: '健康' },
-  { section: '── 边缘运营 ──' },
-  { to: '/edges', label: '边缘设备', short: '边缘' },
-  { to: '/workorders', label: '工单管理', short: '工单' },
-  { to: '/maintenance', label: '预测维护', short: '维护' },
-  { to: '/carbon', label: '碳管理', short: '碳' },
-];
-
 export default function Layout() {
+  const { t, i18n } = useTranslation();
   const toggle = useSidebarStore(s => s.toggle);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -42,7 +15,28 @@ export default function Layout() {
     navigate('/login', { replace: true });
   }
 
-  const roleLabel = user ? (ROLE_LABELS[user.role] ?? user.role) : '';
+  const roleLabel = user ? (t(`role.${user.role}`, user.role)) : '';
+
+  const NAV = [
+    { to: '/', label: t('nav.dashboard'), short: '🏠' },
+    { to: '/equipment', label: t('nav.equipment'), short: t('nav.equipment').slice(0, 2) },
+    { to: '/plant', label: t('nav.plant'), short: t('nav.plant').slice(0, 2) },
+    { to: '/environment', label: t('nav.environment'), short: t('nav.environment').slice(0, 2) },
+    { to: '/simulation', label: t('nav.simulation'), short: t('nav.simulation').slice(0, 2) },
+    { to: '/strategies', label: t('nav.strategies'), short: t('nav.strategies').slice(0, 2) },
+    { to: '/reports', label: t('nav.reports'), short: t('nav.reports').slice(0, 2) },
+    { to: '/alerts', label: t('nav.alerts'), short: t('nav.alerts').slice(0, 2) },
+    { to: '/override', label: t('nav.override'), short: t('nav.override').slice(0, 2) },
+    { to: '/settings', label: t('nav.settings'), short: t('nav.settings').slice(0, 2) },
+    { section: t('nav.monitoringSection') },
+    { to: '/energy/dashboard', label: t('nav.energy'), short: t('nav.energy').slice(0, 2) },
+    { to: '/health/dashboard', label: t('nav.health'), short: t('nav.health').slice(0, 2) },
+    { section: t('nav.operationsSection') },
+    { to: '/edges', label: t('nav.edges'), short: t('nav.edges').slice(0, 2) },
+    { to: '/workorders', label: t('nav.workorders'), short: t('nav.workorders').slice(0, 2) },
+    { to: '/maintenance', label: t('nav.maintenance'), short: t('nav.maintenance').slice(0, 2) },
+    { to: '/carbon', label: t('nav.carbon'), short: t('nav.carbon').slice(0, 2) },
+  ];
 
   return (
     <div className="flex h-screen bg-slate-900 text-slate-100">
@@ -74,6 +68,16 @@ export default function Layout() {
           })}
         </nav>
 
+        {/* Language toggle */}
+        <div className="border-t border-slate-700 pt-3 mt-3">
+          <button
+            onClick={() => i18n.changeLanguage(i18n.language === 'zh' ? 'en' : 'zh')}
+            className="w-full px-2 py-1.5 text-xs border border-slate-600 rounded hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+          >
+            {i18n.language === 'zh' ? 'EN' : '中文'}
+          </button>
+        </div>
+
         {/* User info and logout */}
         {user && (
           <div className="border-t border-slate-700 pt-3 mt-3">
@@ -89,8 +93,8 @@ export default function Layout() {
               onClick={handleLogout}
               className="w-full mt-2 px-2 py-1.5 text-xs text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded transition-colors text-center lg:text-left"
             >
-              <span className="hidden lg:inline">退出登录</span>
-              <span className="lg:hidden" title="退出登录">⏻</span>
+              <span className="hidden lg:inline">{t('common.logout')}</span>
+              <span className="lg:hidden" title={t('common.logout')}>⏻</span>
             </button>
           </div>
         )}
@@ -104,6 +108,13 @@ export default function Layout() {
             ☰
           </button>
           <h1 className="text-lg font-bold text-cyan-400">HVAC Platform</h1>
+          <div className="flex-1" />
+          <button
+            onClick={() => i18n.changeLanguage(i18n.language === 'zh' ? 'en' : 'zh')}
+            className="px-2 py-1 text-xs border border-slate-600 rounded hover:bg-slate-700 text-slate-400"
+          >
+            {i18n.language === 'zh' ? 'EN' : '中文'}
+          </button>
         </header>
 
         <main className="flex-1 overflow-auto p-4 md:p-6">

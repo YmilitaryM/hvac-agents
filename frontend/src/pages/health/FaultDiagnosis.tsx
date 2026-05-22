@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { healthApi } from '../../api/health';
 import { downloadFile } from '../../api/client';
 import type { DiagnosisResult } from '../../api/health';
 
 export default function FaultDiagnosis() {
+  const { t } = useTranslation();
   const [equipmentId, setEquipmentId] = useState(1);
   const [results, setResults] = useState<DiagnosisResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -22,9 +24,9 @@ export default function FaultDiagnosis() {
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      await downloadFile(`/api/health/diagnosis/download?equipment_id=${equipmentId}`, `故障诊断_${equipmentId}.xlsx`);
+      await downloadFile(`/api/health/diagnosis/download?equipment_id=${equipmentId}`, `Fault_Diagnosis_${equipmentId}.xlsx`);
     } catch (e) {
-      alert('下载失败: ' + (e as Error).message);
+      alert(t('healthDiagnosis.downloadFailed') + ': ' + (e as Error).message);
     } finally {
       setDownloading(false);
     }
@@ -33,23 +35,23 @@ export default function FaultDiagnosis() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">故障诊断</h1>
+        <h1 className="text-2xl font-bold">{t('healthDiagnosis.title')}</h1>
         <button
           onClick={handleDownload}
           disabled={downloading}
           className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
         >
-          {downloading ? '下载中...' : '导出Excel'}
+          {downloading ? t('common.downloading') : t('healthDiagnosis.exportExcel')}
         </button>
       </div>
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center gap-4 mb-4">
-          <label className="text-sm text-gray-600">设备 ID:</label>
+          <label className="text-sm text-gray-600">{t('healthDiagnosis.deviceId')}:</label>
           <input type="number" value={equipmentId} onChange={(e) => setEquipmentId(Number(e.target.value))}
                  className="border rounded px-3 py-1 w-24" />
           <button onClick={runDiagnosis} disabled={loading}
                   className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50">
-            {loading ? '诊断中...' : '运行诊断'}
+            {loading ? t('healthDiagnosis.diagnosing') : t('healthDiagnosis.runDiagnosis')}
           </button>
         </div>
         {results.length > 0 && (
@@ -58,11 +60,11 @@ export default function FaultDiagnosis() {
               <div key={i} className="border rounded p-3 flex justify-between items-center">
                 <div>
                   <div className="font-semibold">#{r.rank}: {r.failure_mode}</div>
-                  <div className="text-sm text-gray-500">FMEA #{r.fmea_id} | 严重度: {r.severity}/5</div>
+                  <div className="text-sm text-gray-500">FMEA #{r.fmea_id} | {t('healthDiagnosis.severity')}: {r.severity}/5</div>
                 </div>
                 <div className="text-right">
                   <div className="text-xl font-bold text-blue-600">{(r.confidence * 100).toFixed(0)}%</div>
-                  <div className="text-xs text-gray-400">置信度</div>
+                  <div className="text-xs text-gray-400">{t('healthDiagnosis.confidence')}</div>
                 </div>
               </div>
             ))}
