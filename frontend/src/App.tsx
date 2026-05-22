@@ -27,6 +27,7 @@ const EnergyScheduling = lazy(() => import('./pages/energy/EnergyScheduling'));
 const EnergyDemand = lazy(() => import('./pages/energy/EnergyDemand'));
 const EnergyReports = lazy(() => import('./pages/energy/EnergyReports'));
 const EnergyMV = lazy(() => import('./pages/energy/EnergyMV'));
+const EnergyComparison = lazy(() => import('./pages/energy/EnergyComparison'));
 const HealthDashboard = lazy(() => import('./pages/health/HealthDashboard'));
 const RULPrediction = lazy(() => import('./pages/health/RULPrediction'));
 const FaultDiagnosis = lazy(() => import('./pages/health/FaultDiagnosis'));
@@ -77,6 +78,7 @@ export default function App() {
               <Route path="/energy/demand" element={<EnergyDemand />} />
               <Route path="/energy/reports" element={<EnergyReports />} />
               <Route path="/energy/mv" element={<EnergyMV />} />
+              <Route path="/energy/comparison" element={<EnergyComparison />} />
               <Route path="/health/dashboard" element={<HealthDashboard />} />
               <Route path="/health/rul" element={<RULPrediction />} />
               <Route path="/health/diagnosis" element={<FaultDiagnosis />} />

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { healthApi } from '../../api/health';
+import { downloadFile } from '../../api/client';
 import type { DiagnosisResult } from '../../api/health';
 
 export default function FaultDiagnosis() {
@@ -7,6 +8,7 @@ export default function FaultDiagnosis() {
   const [results, setResults] = useState<DiagnosisResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<unknown>(null);
+  const [downloading, setDownloading] = useState(false);
 
   const runDiagnosis = async () => {
     setLoading(true);
@@ -17,9 +19,29 @@ export default function FaultDiagnosis() {
     setHistory(h);
   };
 
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      await downloadFile(`/api/health/diagnosis/download?equipment_id=${equipmentId}`, `故障诊断_${equipmentId}.xlsx`);
+    } catch (e) {
+      alert('下载失败: ' + (e as Error).message);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">故障诊断</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">故障诊断</h1>
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+        >
+          {downloading ? '下载中...' : '导出Excel'}
+        </button>
+      </div>
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center gap-4 mb-4">
           <label className="text-sm text-gray-600">设备 ID:</label>

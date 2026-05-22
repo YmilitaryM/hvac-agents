@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { healthApi } from '../../api/health';
+import { downloadFile } from '../../api/client';
+import { useState } from 'react';
 
 export default function RULPrediction() {
   const { data, isLoading } = useQuery({
@@ -7,12 +9,33 @@ export default function RULPrediction() {
     queryFn: () => healthApi.getRUL(1),
     refetchInterval: 120000,
   });
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      await downloadFile('/api/health/rul/download?plant_id=1', 'RUL预测.xlsx');
+    } catch (e) {
+      alert('下载失败: ' + (e as Error).message);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (isLoading || !data) return <div className="p-6 text-gray-400">加载中...</div>;
 
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">RUL 预测</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">RUL 预测</h1>
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+        >
+          {downloading ? '下载中...' : '导出Excel'}
+        </button>
+      </div>
       <div className="space-y-4">
         {data.items.map((item, i) => {
           const days = Math.round(item.predicted_hours / 24);

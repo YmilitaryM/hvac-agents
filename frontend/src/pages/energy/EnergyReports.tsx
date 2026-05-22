@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { energyApi } from '../../api/energy';
+import { downloadFile } from '../../api/client';
 import { useState } from 'react';
 
 export default function EnergyReports() {
@@ -9,6 +10,18 @@ export default function EnergyReports() {
     queryFn: () => energyApi.getReports(1, period),
   });
   const [generating, setGenerating] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      await downloadFile(`/api/energy/reports/download?plant_id=1&period=${period}`, `能源报告_${period}.xlsx`);
+    } catch (e) {
+      alert('下载失败: ' + (e as Error).message);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -20,13 +33,22 @@ export default function EnergyReports() {
           </button>
         ))}
       </div>
-      <button
-        onClick={async () => { setGenerating(true); await energyApi.generateReport(1, period, 'daily'); setGenerating(false); }}
-        disabled={generating}
-        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-      >
-        {generating ? '生成中...' : '导出报告'}
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={async () => { setGenerating(true); await energyApi.generateReport(1, period, 'daily'); setGenerating(false); }}
+          disabled={generating}
+          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+        >
+          {generating ? '生成中...' : '导出报告'}
+        </button>
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 disabled:opacity-50"
+        >
+          {downloading ? '下载中...' : '导出Excel'}
+        </button>
+      </div>
       {data && <pre className="bg-gray-50 rounded p-4 text-sm">{JSON.stringify(data, null, 2)}</pre>}
     </div>
   );

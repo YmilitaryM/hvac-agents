@@ -54,4 +54,20 @@ const apiClient = {
   delete: (url: string) => apiFetch(url, { method: 'DELETE', headers: buildHeaders() }),
 };
 
+export async function downloadFile(url: string, filename: string) {
+  const headers: Record<string, string> = {};
+  try {
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+  } catch {}
+
+  const resp = await fetch(url, { headers });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const blob = await resp.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 export { apiFetch, apiClient };
