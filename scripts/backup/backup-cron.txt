@@ -1,0 +1,25 @@
+# HVAC Platform — Example crontab for automated backups
+#
+# Install with:  crontab -e
+# Verify with:   crontab -l
+#
+# Each entry format:
+#   MIN HOUR DOM MON DOW  COMMAND
+#
+# Assumes this repo is checked out at /opt/hvac-agents
+# Adjust paths to match your deployment.
+
+# ── Daily backup at 2:00 AM ─────────────────────────────────────────────────
+# Backs up all databases to /var/backups/hvac/YYYY-MM-DD/
+0 2 * * * /opt/hvac-agents/scripts/backup/backup.sh --all --output-dir /var/backups/hvac/
+
+# ── Weekly cleanup on Sunday at midnight ────────────────────────────────────
+# Keeps the 4 most recent daily backup directories (4 weeks)
+0 0 * * 0 /opt/hvac-agents/scripts/backup/cleanup.sh --keep 4 --dir /var/backups/hvac/
+
+# ── (Optional) Nightly backup of a single critical database ─────────────────
+# 30 1 * * * /opt/hvac-agents/scripts/backup/backup.sh --db energy_db --output-dir /var/backups/hvac/
+
+# ── (Optional) Log output ───────────────────────────────────────────────────
+# Append stdout/stderr to a log file for debugging:
+# 0 2 * * * /opt/hvac-agents/scripts/backup/backup.sh --all --output-dir /var/backups/hvac/ >> /var/log/hvac-backup.log 2>&1
