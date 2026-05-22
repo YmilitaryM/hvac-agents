@@ -2,11 +2,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+import bcrypt
+from sqlalchemy import select
 
 from common.db import create_engine, create_session_factory, Base
 from common.metrics import MetricsMiddleware, metrics_endpoint
 
 from .auth import router as auth_router
+from .models import UserModel
 from .proxy import proxy_request, SERVICE_URLS, register_ws_client, unregister_ws_client, broadcast_ws
 from .audit_middleware import AuditMiddleware
 from .rate_limiter import RateLimitMiddleware
@@ -24,6 +27,17 @@ async def lifespan(app: FastAPI):
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
 
+    # Seed default admin user if no users exist
+    async with app.state.session_factory() as session:
+        result = await session.execute(select(UserModel).limit(1))
+        if not result.scalar_one_or_none():
+            session.add(UserModel(
+                username="admin",
+                hashed_password=bcrypt.hashpw(b"admin", bcrypt.gensalt()).decode(),
+                role="admin",
+            ))
+            await session.commit()
+
     SERVICE_URLS.update({
         "asset": s.asset_service_url,
         "environment": s.env_service_url,
@@ -31,6 +45,8 @@ async def lifespan(app: FastAPI):
         "agent": s.agent_service_url,
         "acquisition": s.acquisition_service_url,
         "edgemanager": s.edgemanager_service_url,
+        "energy": s.energy_service_url,
+        "health": s.health_service_url,
     })
     yield
     await engine.dispose()
